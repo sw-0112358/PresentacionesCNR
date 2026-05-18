@@ -56,10 +56,10 @@
           radial-gradient(ellipse 40% 30% at 95% 100%, rgba(22,163,74,0.05) 0%, transparent 70%);
       }
 
-      [data-theme="light"] .item-bar { background: var(--surface); }
-      [data-theme="light"] .cnr-block { background: #f1f5f9; }
+      [data-theme="light"] .item-bar    { background: var(--surface); }
+      [data-theme="light"] .cnr-block   { background: #f1f5f9; }
       [data-theme="light"] #storage-bar { background: var(--storage-bg); border-color: var(--border); }
-      [data-theme="light"] #toast { background: var(--surface); color: var(--text); }
+      [data-theme="light"] #toast       { background: var(--surface); color: var(--text); }
 
       *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
       body { background: var(--bg); color: var(--text); font-family: 'Outfit', sans-serif; min-height: 100vh; padding: 0 0 60px; transition: background 0.3s, color 0.3s; }
@@ -92,6 +92,12 @@
       input[type="text"]:focus, textarea:focus { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-glow); }
       input::placeholder, textarea::placeholder { color: var(--text-muted); }
       textarea { resize: vertical; min-height: 72px; }
+
+      /* Campo de presentación cuando el número ya existe en la lista */
+      input.input-duplicado {
+        border-color: #ef4444 !important;
+        box-shadow: 0 0 0 3px rgba(239,68,68,0.2) !important;
+      }
 
       .drop-zone { position: relative; background: var(--surface2); border: 2px dashed var(--border); border-radius: 12px; padding: 22px 16px; text-align: center; cursor: pointer; transition: border-color 0.2s, background 0.2s; overflow: hidden; }
       .drop-zone:hover, .drop-zone.over { border-color: var(--accent); background: var(--accent-glow); }
@@ -140,24 +146,13 @@
       .item:hover { border-color: var(--border-lit); }
       .item.hidden { display: none; }
 
+      /* border-left se aplica por JS inline desde ESTADOS.barColor */
       .item-bar { display: flex; align-items: center; gap: 8px; padding: 10px 14px; background: var(--surface); border-bottom: 1px solid var(--border); border-left: 3px solid transparent; transition: background 0.3s; }
-      .bar-tramite   { border-left-color: #3b82f6; }
-      .bar-inscrito  { border-left-color: #22c55e; }
-      .bar-observado { border-left-color: #ef4444; }
-      .bar-catastro  { border-left-color: #a855f7; }
-      .bar-entrega   { border-left-color: #f59e0b; }
-      .bar-retirado  { border-left-color: #64748b; }
 
+      /* background del badge se aplica por JS inline desde ESTADOS.badgeGradient */
       .item-num { width: 30px; height: 30px; flex-shrink: 0; background: linear-gradient(135deg, var(--accent), #6366f1); border-radius: 8px; display: flex; align-items: center; justify-content: center; font-family: 'JetBrains Mono', monospace; font-size: 0.68rem; font-weight: 500; color: #fff; box-shadow: 0 2px 8px rgba(59,130,246,0.3); cursor: pointer; user-select: none; }
       .item-num:hover { opacity: 0.85; }
       .item-presentacion-bar { font-family: 'JetBrains Mono', monospace; font-size: 0.85rem; font-weight: 600; color: var(--text); flex: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-
-      .num-tramite   { background: linear-gradient(135deg,#2563eb,#3b82f6) !important; }
-      .num-inscrito  { background: linear-gradient(135deg,#16a34a,#22c55e) !important; }
-      .num-observado { background: linear-gradient(135deg,#dc2626,#ef4444) !important; }
-      .num-catastro  { background: linear-gradient(135deg,#7c3aed,#a855f7) !important; }
-      .num-entrega   { background: linear-gradient(135deg,#d97706,#f59e0b) !important; }
-      .num-retirado  { background: linear-gradient(135deg,#475569,#64748b) !important; }
 
       .item-body { padding: 12px 14px; display: flex; flex-direction: column; gap: 10px; }
       .item-body.collapsed { display: none; }
@@ -242,7 +237,8 @@
         <div class="form-grid">
           <div class="field">
             <label>N&#176; de Presentaci&#243;n</label>
-            <input type="text" id="txtPresentacion" placeholder="Ej: 202611009689" value="20261100">
+            <input type="text" id="txtPresentacion" placeholder="Ej: 202611009689" value="20261100"
+                   oninput="verificarDuplicado(this.value)">
           </div>
           <div class="field">
             <label>Detalles</label>
@@ -303,11 +299,15 @@
     <canvas id="canvas"></canvas>
     <script src="https://cdn.jsdelivr.net/npm/jsqr/dist/jsQR.js"></script>
     <script>
-      var STORAGE_KEY  = 'qr_registros_v1';
-      var THEME_KEY    = 'qr_tema_v1';
-      var CNR_CONSULTA = 'https://www.e.cnr.gob.sv/ConsultaTramite3/consulta/consultaTramite.htm';
-      var registros    = [];
-      var qrTexto      = '';
+
+      /* ============================================================
+         VARIABLES GLOBALES
+         ============================================================ */
+      var STORAGE_KEY     = 'qr_registros_v1';
+      var THEME_KEY       = 'qr_tema_v1';
+      var CNR_CONSULTA    = 'https://www.e.cnr.gob.sv/ConsultaTramite3/consulta/consultaTramite.htm';
+      var registros       = [];
+      var qrTexto         = '';
       var terminoBusqueda = '';
 
       var fileInput   = document.getElementById('fileInput');
@@ -317,13 +317,109 @@
       var canvas      = document.getElementById('canvas');
       var ctx         = canvas.getContext('2d');
 
+
+      /* ============================================================
+   DEFINICIÓN DE ESTADOS — escala de verde progresiva
+   ─────────────────────────────────────────────────────────────
+   Escala de avance del trámite (de claro a oscuro):
+
+     docinicio          #bbf7d0  verde muy claro  ← inicio
+     escaneoadm         #4ade80  verde medio
+     inscritaendespacho #15803d  verde oscuro     ← listo
+     inscritaretirada   #94a3b8  gris claro       ← concluido
+
+     observada          #ef4444  rojo             ← acción requerida
+     catastro           #a855f7  morado           ← proceso especial
+   ============================================================ */
+      var ESTADOS = [
+
+        /* ── Retirado — gris claro ─────────────────────────────────
+     DEBE ir antes que inscritaendespacho porque su texto
+     también contiene la palabra "inscrito".                     */
+        {
+          id:            'inscritaretirada',
+          palabrasClave: ['fue retirado', 'retirado por'],
+          barColor:      '#94a3b8',
+          badgeGradient: 'linear-gradient(135deg, #64748b, #94a3b8)'
+        },
+
+        /* ── Inscrita en despacho — verde oscuro ────────────────── */
+        {
+          id:            'inscritaendespacho',
+          palabrasClave: ['listo para su entrega', 'inscrito y listo'],
+          barColor:      '#15803d',
+          badgeGradient: 'linear-gradient(135deg, #14532d, #15803d)'
+        },
+
+        /* ── Escaneo administrativo — verde medio ───────────────── */
+        {
+          id:            'escaneoadm',
+          palabrasClave: ['escaneo de expediente', 'escaneo administrativo', 'generando escaneo'],
+          barColor:      '#4ade80',
+          badgeGradient: 'linear-gradient(135deg, #16a34a, #4ade80)'
+        },
+
+        /* ── Documento ingresado — verde muy claro ──────────────── */
+        {
+          id:            'docinicio',
+          palabrasClave: ['documento ingresado', 'proceso iniciado'],
+          barColor:      '#bbf7d0',
+          badgeGradient: 'linear-gradient(135deg, #4ade80, #bbf7d0)'
+        },
+
+        /* ── Observada — rojo ───────────────────────────────────── */
+        {
+          id:            'observada',
+          palabrasClave: ['ver notificaci', 'correo electr', 'notificad', 'observad'],
+          barColor:      '#ef4444',
+          badgeGradient: 'linear-gradient(135deg, #dc2626, #ef4444)'
+        },
+
+        /* ── Catastro — morado ──────────────────────────────────── */
+        {
+          id:            'catastro',
+          palabrasClave: ['catastro'],
+          barColor:      '#a855f7',
+          badgeGradient: 'linear-gradient(135deg, #7c3aed, #a855f7)'
+        }
+
+      ];
+
+
+
+      /* ============================================================
+         DETECCIÓN DE ESTADO
+         Recorre ESTADOS en orden; devuelve el objeto completo del
+         primer estado que coincida, o null si ninguno aplica.
+         ============================================================ */
+      function detectarEstado(r) {
+        if (!r.cnr || !r.cnr.estado) return null;
+        var estadoTexto = r.cnr.estado.toLowerCase();
+        for (var i = 0; i < ESTADOS.length; i++) {
+          var def = ESTADOS[i];
+          for (var j = 0; j < def.palabrasClave.length; j++) {
+            if (estadoTexto.indexOf(def.palabrasClave[j]) >= 0) {
+              return def;
+            }
+          }
+        }
+        return null;
+      }
+
+
+      /* ============================================================
+         INIT
+         ============================================================ */
       window.addEventListener('DOMContentLoaded', function() {
         cargarTema();
         cargarDesdeStorage();
         renderList();
       });
 
-      /* ── Tema ── */
+
+      /* ============================================================
+         TEMA
+         ============================================================ */
       function cargarTema() {
         var tema = localStorage.getItem(THEME_KEY) || 'dark';
         aplicarTema(tema);
@@ -342,7 +438,10 @@
         if (btn) btn.textContent = tema === 'dark' ? '\u{1F319}' : '\u2600\uFE0F';
       }
 
-      /* ── Drag & drop ── */
+
+      /* ============================================================
+         DRAG & DROP / ESCANER QR
+         ============================================================ */
       dropZone.addEventListener('dragover',  function(e) { e.preventDefault(); dropZone.classList.add('over'); });
       dropZone.addEventListener('dragleave', function()  { dropZone.classList.remove('over'); });
       dropZone.addEventListener('drop', function(e) {
@@ -361,7 +460,8 @@
         reader.onload = function(e) {
           var img = new Image();
           img.onload = function() {
-            canvas.width = img.width; canvas.height = img.height;
+            canvas.width  = img.width;
+            canvas.height = img.height;
             ctx.drawImage(img, 0, 0);
             var code = jsQR(ctx.getImageData(0, 0, canvas.width, canvas.height).data, canvas.width, canvas.height);
             if (code) {
@@ -378,10 +478,48 @@
         reader.readAsDataURL(file);
       }
 
+
+      /* ============================================================
+         VALIDACIÓN DE DUPLICADO EN TIEMPO REAL
+         Se llama en cada tecla del campo N° Presentación.
+         Pone el borde rojo mientras el número ya exista en la lista.
+         ============================================================ */
+      function verificarDuplicado(valor) {
+        var campo  = document.getElementById('txtPresentacion');
+        var v      = valor.trim();
+        var existe = false;
+        for (var i = 0; i < registros.length; i++) {
+          if (registros[i].presentacion === v) { existe = true; break; }
+        }
+        if (existe) {
+          campo.classList.add('input-duplicado');
+        } else {
+          campo.classList.remove('input-duplicado');
+        }
+      }
+
+
+      /* ============================================================
+         CRUD DE REGISTROS
+         ============================================================ */
       function agregarRegistro() {
         var presentacion = document.getElementById('txtPresentacion').value.trim();
         var detalles     = document.getElementById('txtDetalles').value.trim();
-        if (!presentacion) { toast('Ingresa el N de Presentacion.'); return; }
+
+        if (!presentacion) {
+          toast('Ingresa el N° de Presentación.');
+          return;
+        }
+
+        // Bloquear duplicado antes de agregar
+        for (var i = 0; i < registros.length; i++) {
+          if (registros[i].presentacion === presentacion) {
+            toast('⚠️ El N° ' + presentacion + ' ya está en la lista.');
+            document.getElementById('txtPresentacion').classList.add('input-duplicado');
+            return;
+          }
+        }
+
         registros.push({
           id:           Date.now(),
           presentacion: presentacion,
@@ -408,7 +546,7 @@
         window.open(url, '_blank', 'noopener,noreferrer');
         if (!qrUrl) {
           navigator.clipboard.writeText(presentacion).catch(function() {});
-          toast('CNR abierto y N copiado al portapapeles');
+          toast('CNR abierto y N° copiado al portapapeles');
         }
       }
 
@@ -451,9 +589,15 @@
 
       function pegarDesdeCNR(id) {
         var cnrEl = document.getElementById('cnr-block-' + id);
-        if (cnrEl) cnrEl.innerHTML = '<div class="cnr-empty"><span class="paste-spin"></span> Leyendo portapapeles...</div>';
+        if (cnrEl) {
+          cnrEl.innerHTML = '<div class="cnr-empty"><span class="paste-spin"></span> Leyendo portapapeles...</div>';
+        }
         navigator.clipboard.readText().then(function(texto) {
-          if (!texto || texto.trim().length < 20) { toast('El portapapeles esta vacio o sin datos CNR.'); renderList(); return; }
+          if (!texto || texto.trim().length < 20) {
+            toast('El portapapeles esta vacio o sin datos CNR.');
+            renderList();
+            return;
+          }
           var datos = parsearTextoCNR(texto);
           for (var i = 0; i < registros.length; i++) {
             if (registros[i].id === id) { registros[i].cnr = datos; break; }
@@ -461,9 +605,16 @@
           guardarEnStorage();
           renderList();
           toast('Datos pegados correctamente.');
-        }).catch(function(e) { toast('Sin acceso al portapapeles: ' + e.message); renderList(); });
+        }).catch(function(e) {
+          toast('Sin acceso al portapapeles: ' + e.message);
+          renderList();
+        });
       }
 
+
+      /* ============================================================
+         PARSEO CNR
+         ============================================================ */
       function parsearTextoCNR(texto) {
         function extraer(label) {
           var esc2 = label.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
@@ -487,113 +638,275 @@
         };
       }
 
-      function detectarEstado(r) {
-        if (!r.cnr || !r.cnr.estado) return '';
-        var e = r.cnr.estado.toLowerCase();
-        if (e.indexOf('retirad') >= 0)                                                  return 'retirado';
-        if (e.indexOf('observad') >= 0 || e.indexOf('correo') >= 0 ||
-            e.indexOf('notificad') >= 0 || e.indexOf('ver notif') >= 0)                return 'observado';
-        if (e.indexOf('listo') >= 0 || e.indexOf('entrega') >= 0)                      return 'entrega';
-        if (e.indexOf('inscrit') >= 0)                                                  return 'inscrito';
-        if (e.indexOf('catastro') >= 0)                                                 return 'catastro';
-        if (e.indexOf('tramite') >= 0 || e.indexOf('tr\u00e1mite') >= 0 ||
-            e.indexOf('despacho') >= 0 || e.indexOf('pendiente') >= 0)                 return 'tramite';
-        return '';
-      }
 
-      var ESTADO_INFO = {
-        tramite:   { barCls: 'bar-tramite',   numCls: 'num-tramite'   },
-        inscrito:  { barCls: 'bar-inscrito',  numCls: 'num-inscrito'  },
-        observado: { barCls: 'bar-observado', numCls: 'num-observado' },
-        catastro:  { barCls: 'bar-catastro',  numCls: 'num-catastro'  },
-        entrega:   { barCls: 'bar-entrega',   numCls: 'num-entrega'   },
-        retirado:  { barCls: 'bar-retirado',  numCls: 'num-retirado'  }
-      };
-
+      /* ============================================================
+         RENDER — BLOQUE CNR
+         ============================================================ */
       function renderCNRBlock(r) {
+
+        var bloque = document.createElement('div');
+        bloque.className = 'cnr-block';
+        bloque.id = 'cnr-block-' + r.id;
+
         if (!r.cnr) {
-          return '<div class="cnr-block" id="cnr-block-' + r.id + '">' +
-            '<div class="cnr-empty">Sin datos &mdash; copia el texto de la pagina CNR y presiona Pegar datos</div>' +
-            '</div>';
+          var vacio = document.createElement('div');
+          vacio.className = 'cnr-empty';
+          vacio.textContent = 'Sin datos — copia el texto de la página CNR y presiona Pegar datos';
+          bloque.appendChild(vacio);
+          return bloque;
         }
-        var d = r.cnr;
-        function fila(lbl, val) {
-          if (!val) return '';
-          return '<div class="cnr-row"><span class="cnr-label">' + lbl + '</span><span class="cnr-value">' + esc(val) + '</span></div>';
+
+        function agregarFila(contenedor, etiqueta, valor) {
+          if (!valor) return;
+          var fila = document.createElement('div');
+          fila.className = 'cnr-row';
+          var lbl = document.createElement('span');
+          lbl.className = 'cnr-label';
+          lbl.textContent = etiqueta;
+          var val = document.createElement('span');
+          val.className = 'cnr-value';
+          val.textContent = valor;
+          fila.appendChild(lbl);
+          fila.appendChild(val);
+          contenedor.appendChild(fila);
         }
-        return '<div class="cnr-block" id="cnr-block-' + r.id + '">' +
-          '<div class="cnr-section-title">Datos generales</div>' +
-          '<div class="cnr-rows">' +
-          fila('Matr\u00edcula',    d.matricula)    +
-          fila('Presentaci\u00f3n', d.presentacion) +
-          fila('Fecha pres.',       d.fechaPres)    +
-          fila('Direcci\u00f3n',    d.direccion)    +
-          fila('Ubicaci\u00f3n',    d.ubicacion)    +
-          fila('Acto',              d.acto)         +
-          '</div>' +
-          '<div class="cnr-section-title" style="border-top:1px solid var(--border)">Estado jur\u00eddico</div>' +
-          '<div class="cnr-rows">' +
-          (d.estado ? '<div class="cnr-row"><span class="cnr-label">Estado</span><span class="cnr-value estado-valor">' + esc(d.estado) + '</span></div>' : '') +
-          fila('Fecha estado', d.fechaEstado) +
-          fila('Actualizado',  d.fechaSync)  +
-          '</div>' +
-          '</div>';
+
+        // Sección datos generales
+        var tituloGeneral = document.createElement('div');
+        tituloGeneral.className = 'cnr-section-title';
+        tituloGeneral.textContent = 'Datos generales';
+        bloque.appendChild(tituloGeneral);
+
+        var filasGenerales = document.createElement('div');
+        filasGenerales.className = 'cnr-rows';
+        bloque.appendChild(filasGenerales);
+
+        agregarFila(filasGenerales, 'Matrícula',    r.cnr.matricula);
+        agregarFila(filasGenerales, 'Presentación', r.cnr.presentacion);
+        agregarFila(filasGenerales, 'Fecha pres.',  r.cnr.fechaPres);
+        agregarFila(filasGenerales, 'Dirección',    r.cnr.direccion);
+        agregarFila(filasGenerales, 'Ubicación',    r.cnr.ubicacion);
+        agregarFila(filasGenerales, 'Acto',         r.cnr.acto);
+
+        // Sección estado jurídico
+        var tituloEstado = document.createElement('div');
+        tituloEstado.className = 'cnr-section-title';
+        tituloEstado.style.borderTop = '1px solid var(--border)';
+        tituloEstado.textContent = 'Estado jurídico';
+        bloque.appendChild(tituloEstado);
+
+        var filasEstado = document.createElement('div');
+        filasEstado.className = 'cnr-rows';
+        bloque.appendChild(filasEstado);
+
+        if (r.cnr.estado) {
+          var filaEstado = document.createElement('div');
+          filaEstado.className = 'cnr-row';
+          var lblEstado = document.createElement('span');
+          lblEstado.className = 'cnr-label';
+          lblEstado.textContent = 'Estado';
+          var valEstado = document.createElement('span');
+          valEstado.className = 'cnr-value estado-valor';
+          valEstado.textContent = r.cnr.estado;
+          filaEstado.appendChild(lblEstado);
+          filaEstado.appendChild(valEstado);
+          filasEstado.appendChild(filaEstado);
+        }
+
+        agregarFila(filasEstado, 'Fecha estado', r.cnr.fechaEstado);
+        agregarFila(filasEstado, 'Actualizado',  r.cnr.fechaSync);
+
+        return bloque;
       }
 
+
+      /* ============================================================
+         RENDER — LISTA COMPLETA
+         Los colores de barra y badge se toman de ESTADOS via style
+         inline, sin necesidad de clases CSS por estado.
+         ============================================================ */
       function renderList() {
+
         var list  = document.getElementById('registro-list');
         var count = document.getElementById('list-count');
         count.textContent = registros.length;
+
         if (registros.length === 0) {
-          list.innerHTML = '<div class="empty-state"><span class="empty-icon">&#128235;</span>No hay registros a\u00fan.<br>Completa el formulario y agrega el primero.</div>';
+          list.innerHTML = '';
+          var empty = document.createElement('div');
+          empty.className = 'empty-state';
+          empty.innerHTML = '<span class="empty-icon">&#128235;</span>No hay registros aún.<br>Completa el formulario y agrega el primero.';
+          list.appendChild(empty);
           return;
         }
+
         list.innerHTML = '';
+
         for (var i = 0; i < registros.length; i++) {
           var r      = registros[i];
           var num    = String(registros.length - i).padStart(2, '0');
-          var estado = detectarEstado(r);
-          var info   = estado ? ESTADO_INFO[estado] : null;
-          var barCls = info ? info.barCls : '';
-          var numCls = info ? info.numCls : '';
-          var linkBtn = r.qr
-          ? '<button class="btn-sm link-btn" onclick="abrirCNR(\'' + esc(r.presentacion) + '\',\'' + encodeURI(r.qr) + '\')" title="Abrir link QR">&#128279; Ver</button>'
-          : '<button class="btn-sm link-btn" onclick="abrirCNR(\'' + esc(r.presentacion) + '\',\'\')" title="Consultar en CNR">&#128203;&#127760;</button>';
-          var detallesHTML = r.detalles ? '<div class="item-detalles">' + esc(r.detalles) + '</div>' : '';
-          var editWrap =
-              '<div class="edit-wrap" id="edit-wrap-' + r.id + '">' +
-              '<div class="edit-lbl edit-field-gap">N&#176; Presentaci&#243;n</div>' +
-              '<input type="text" id="edit-pres-' + r.id + '" placeholder="N\u00famero de presentaci\u00f3n" style="background:var(--surface);border:1px solid var(--accent);border-radius:8px;padding:8px 11px;color:var(--text);font-family:JetBrains Mono,monospace;font-size:0.85rem;outline:none;width:100%;margin-bottom:10px;">' +
-              '<div class="edit-lbl">Detalles</div>' +
-              '<textarea id="edit-input-' + r.id + '" placeholder="Escribe los detalles..." style="background:var(--surface);border:1px solid var(--accent);border-radius:8px;padding:8px 11px;color:var(--text);font-family:Outfit,sans-serif;font-size:0.85rem;outline:none;width:100%;min-height:58px;resize:vertical;margin-top:4px;box-shadow:0 0 0 2px var(--accent-glow);"></textarea>' +
-              '<div class="edit-actions">' +
-              '<button class="btn-sm save-btn" onclick="guardarDetalles(' + r.id + ')">&#10003; Guardar</button>' +
-              '<button class="btn-sm" onclick="editarDetalles(' + r.id + ')">Cancelar</button>' +
-              '</div>' +
-              '</div>';
-          var bottomRow =
-              '<div class="item-bottom-row">' +
-              '<button class="btn-sm paste-btn" onclick="pegarDesdeCNR(' + r.id + ')">&#128203; Pegar datos CNR</button>' +
-              '<button class="btn-sm edit-btn"  onclick="editarDetalles(' + r.id + ')">&#9998; Editar</button>' +
-              '<span class="item-timestamp">&#128336; ' + r.fecha + '</span>' +
-              '</div>';
-          var div = document.createElement('div');
-          div.className = 'item'; div.id = 'item-' + r.id;
-          div.innerHTML =
-            '<div class="item-bar ' + barCls + '">' +
-            '<div class="item-num ' + numCls + '" onclick="toggleItem(' + r.id + ')" title="Expandir / Contraer">#' + num + '</div>' +
-            '<div class="item-presentacion-bar">' + esc(r.presentacion) + '</div>' +
-            linkBtn +
-            '<button class="btn-sm danger" onclick="eliminarRegistro(' + r.id + ')" title="Eliminar">&#x2715;</button>' +
-            '</div>' +
-            '<div class="item-body collapsed" id="body-' + r.id + '">' +
-            detallesHTML + editWrap + renderCNRBlock(r) + bottomRow +
-            '</div>';
-          list.appendChild(div);
+          var estado = detectarEstado(r);   // objeto de ESTADOS o null
+
+          /* ── Tarjeta contenedora ── */
+          var item = document.createElement('div');
+          item.className = 'item';
+          item.id = 'item-' + r.id;
+
+          /* ── Barra superior ── */
+          var bar = document.createElement('div');
+          bar.className = 'item-bar';
+          if (estado) bar.style.borderLeftColor = estado.barColor;
+
+          // Badge numérico
+          var numBadge = document.createElement('div');
+          numBadge.className = 'item-num';
+          numBadge.title = 'Expandir / Contraer';
+          numBadge.textContent = '#' + num;
+          if (estado) numBadge.style.background = estado.badgeGradient;
+          (function(id) {
+            numBadge.onclick = function() { toggleItem(id); };
+          })(r.id);
+          bar.appendChild(numBadge);
+
+          // Número de presentación
+          var presBar = document.createElement('div');
+          presBar.className = 'item-presentacion-bar';
+          presBar.textContent = r.presentacion;
+          bar.appendChild(presBar);
+
+          // Botón Ver / CNR
+          var btnLink = document.createElement('button');
+          btnLink.className = 'btn-sm link-btn';
+          if (r.qr) {
+            btnLink.title = 'Abrir link QR';
+            btnLink.innerHTML = '&#128279; Ver';
+            (function(pres, qr) {
+              btnLink.onclick = function() { abrirCNR(pres, qr); };
+            })(r.presentacion, r.qr);
+          } else {
+            btnLink.title = 'Consultar en CNR';
+            btnLink.innerHTML = '&#128203;&#127760;';
+            (function(pres) {
+              btnLink.onclick = function() { abrirCNR(pres, ''); };
+            })(r.presentacion);
+          }
+          bar.appendChild(btnLink);
+
+          // Botón eliminar
+          var btnEliminar = document.createElement('button');
+          btnEliminar.className = 'btn-sm danger';
+          btnEliminar.title = 'Eliminar';
+          btnEliminar.innerHTML = '&#x2715;';
+          (function(id) {
+            btnEliminar.onclick = function() { eliminarRegistro(id); };
+          })(r.id);
+          bar.appendChild(btnEliminar);
+
+          item.appendChild(bar);
+
+          /* ── Cuerpo colapsado ── */
+          var body = document.createElement('div');
+          body.className = 'item-body collapsed';
+          body.id = 'body-' + r.id;
+
+          // Detalles
+          if (r.detalles) {
+            var detDiv = document.createElement('div');
+            detDiv.className = 'item-detalles';
+            detDiv.textContent = r.detalles;
+            body.appendChild(detDiv);
+          }
+
+          // Panel de edición
+          var editWrap = document.createElement('div');
+          editWrap.className = 'edit-wrap';
+          editWrap.id = 'edit-wrap-' + r.id;
+
+          var lblPres = document.createElement('div');
+          lblPres.className = 'edit-lbl edit-field-gap';
+          lblPres.textContent = 'N° Presentación';
+          editWrap.appendChild(lblPres);
+
+          var inputPres = document.createElement('input');
+          inputPres.type = 'text';
+          inputPres.id = 'edit-pres-' + r.id;
+          inputPres.placeholder = 'Número de presentación';
+          inputPres.style.cssText = 'background:var(--surface);border:1px solid var(--accent);border-radius:8px;padding:8px 11px;color:var(--text);font-family:JetBrains Mono,monospace;font-size:0.85rem;outline:none;width:100%;margin-bottom:10px;';
+          editWrap.appendChild(inputPres);
+
+          var lblDet = document.createElement('div');
+          lblDet.className = 'edit-lbl';
+          lblDet.textContent = 'Detalles';
+          editWrap.appendChild(lblDet);
+
+          var textareaDet = document.createElement('textarea');
+          textareaDet.id = 'edit-input-' + r.id;
+          textareaDet.placeholder = 'Escribe los detalles...';
+          textareaDet.style.cssText = 'background:var(--surface);border:1px solid var(--accent);border-radius:8px;padding:8px 11px;color:var(--text);font-family:Outfit,sans-serif;font-size:0.85rem;outline:none;width:100%;min-height:58px;resize:vertical;margin-top:4px;box-shadow:0 0 0 2px var(--accent-glow);';
+          editWrap.appendChild(textareaDet);
+
+          var editActions = document.createElement('div');
+          editActions.className = 'edit-actions';
+
+          var btnGuardar = document.createElement('button');
+          btnGuardar.className = 'btn-sm save-btn';
+          btnGuardar.innerHTML = '&#10003; Guardar';
+          (function(id) {
+            btnGuardar.onclick = function() { guardarDetalles(id); };
+          })(r.id);
+          editActions.appendChild(btnGuardar);
+
+          var btnCancelar = document.createElement('button');
+          btnCancelar.className = 'btn-sm';
+          btnCancelar.textContent = 'Cancelar';
+          (function(id) {
+            btnCancelar.onclick = function() { editarDetalles(id); };
+          })(r.id);
+          editActions.appendChild(btnCancelar);
+
+          editWrap.appendChild(editActions);
+          body.appendChild(editWrap);
+
+          // Bloque CNR
+          body.appendChild(renderCNRBlock(r));
+
+          // Fila inferior
+          var bottomRow = document.createElement('div');
+          bottomRow.className = 'item-bottom-row';
+
+          var btnPegar = document.createElement('button');
+          btnPegar.className = 'btn-sm paste-btn';
+          btnPegar.innerHTML = '&#128203; Pegar datos CNR';
+          (function(id) {
+            btnPegar.onclick = function() { pegarDesdeCNR(id); };
+          })(r.id);
+          bottomRow.appendChild(btnPegar);
+
+          var btnEditar = document.createElement('button');
+          btnEditar.className = 'btn-sm edit-btn';
+          btnEditar.innerHTML = '&#9998; Editar';
+          (function(id) {
+            btnEditar.onclick = function() { editarDetalles(id); };
+          })(r.id);
+          bottomRow.appendChild(btnEditar);
+
+          var timestamp = document.createElement('span');
+          timestamp.className = 'item-timestamp';
+          timestamp.innerHTML = '&#128336; ' + r.fecha;
+          bottomRow.appendChild(timestamp);
+
+          body.appendChild(bottomRow);
+          item.appendChild(body);
+          list.appendChild(item);
         }
+
         if (terminoBusqueda) aplicarFiltro();
       }
 
+
+      /* ============================================================
+         BÚSQUEDA Y FILTRO
+         ============================================================ */
       function buscar(termino) {
         terminoBusqueda = termino.trim().toLowerCase();
         document.getElementById('searchClear').classList.toggle('visible', terminoBusqueda.length > 0);
@@ -623,136 +936,199 @@
             if (String(registros[i].id) === id) { r = registros[i]; break; }
           }
           if (!r) { item.classList.add('hidden'); return; }
-          var haystack = [r.presentacion||'', r.detalles||'', r.fecha||'',
-                          r.cnr?(r.cnr.matricula||''):'', r.cnr?(r.cnr.acto||''):'',
-                          r.cnr?(r.cnr.direccion||''):'', r.cnr?(r.cnr.ubicacion||''):'',
-                          r.cnr?(r.cnr.estado||''):'', r.cnr?(r.cnr.presentacion||''):''
-                         ].join(' ').toLowerCase();
+          var haystack = [
+            r.presentacion || '', r.detalles || '', r.fecha || '',
+            r.cnr ? (r.cnr.matricula    || '') : '',
+            r.cnr ? (r.cnr.acto         || '') : '',
+            r.cnr ? (r.cnr.direccion    || '') : '',
+            r.cnr ? (r.cnr.ubicacion    || '') : '',
+            r.cnr ? (r.cnr.estado       || '') : '',
+            r.cnr ? (r.cnr.presentacion || '') : ''
+          ].join(' ').toLowerCase();
           if (haystack.indexOf(terminoBusqueda) >= 0) {
             item.classList.remove('hidden');
             var body = document.getElementById('body-' + r.id);
             if (body) body.classList.remove('collapsed');
             visibles++;
-          } else { item.classList.add('hidden'); }
+          } else {
+            item.classList.add('hidden');
+          }
         });
-        if (countEl) countEl.textContent = terminoBusqueda ? (visibles + ' resultado' + (visibles!==1?'s':'') + ' encontrado' + (visibles!==1?'s':'')) : '';
+        if (countEl) {
+          countEl.textContent = terminoBusqueda
+            ? (visibles + ' resultado' + (visibles !== 1 ? 's' : '') + ' encontrado' + (visibles !== 1 ? 's' : ''))
+          : '';
+        }
       }
 
+
+      /* ============================================================
+         IMPORTAR / EXPORTAR SHEETS
+         ============================================================ */
       function importarDeSheets() {
         navigator.clipboard.readText().then(function(texto) {
           if (!texto || texto.trim().length === 0) { toast('El portapapeles esta vacio.'); return; }
-          var lineas = texto.trim().split(/\r?\n/);
-          var nuevos = 0, omitidos = 0;
+          var lineas   = texto.trim().split(/\r?\n/);
+          var nuevos   = 0;
+          var omitidos = 0;
           for (var i = 0; i < lineas.length; i++) {
-            var linea = lineas[i].trim(); if (!linea) continue;
-            var partes = linea.split('\t');
-            var presentacion = (partes[0]||'').trim();
-            var detalles     = (partes[1]||'').trim();
+            var linea = lineas[i].trim();
+            if (!linea) continue;
+            var partes       = linea.split('\t');
+            var presentacion = (partes[0] || '').trim();
+            var detalles     = (partes[1] || '').trim();
             if (!presentacion) continue;
             var existe = false;
-            for (var j = 0; j < registros.length; j++) { if (registros[j].presentacion===presentacion){existe=true;break;} }
+            for (var j = 0; j < registros.length; j++) {
+              if (registros[j].presentacion === presentacion) { existe = true; break; }
+            }
             if (existe) { omitidos++; continue; }
-            registros.push({ id:Date.now()+i, presentacion:presentacion, detalles:detalles, qr:'', cnr:null,
-                            fecha:new Date().toLocaleString('es-SV',{dateStyle:'short',timeStyle:'short'}) });
+            registros.push({
+              id:           Date.now() + i,
+              presentacion: presentacion,
+              detalles:     detalles,
+              qr:           '',
+              cnr:          null,
+              fecha:        new Date().toLocaleString('es-SV', { dateStyle: 'short', timeStyle: 'short' })
+            });
             nuevos++;
           }
-          if (nuevos===0&&omitidos===0) { toast('Sin datos validos en el portapapeles.'); return; }
-          guardarEnStorage(); renderList();
-          var msg = nuevos+' importado'+(nuevos!==1?'s':'');
-          if (omitidos>0) msg += ' \u00b7 '+omitidos+' ya exist\u00eda'+(omitidos!==1?'n':'');
+          if (nuevos === 0 && omitidos === 0) { toast('Sin datos validos en el portapapeles.'); return; }
+          guardarEnStorage();
+          renderList();
+          var msg = nuevos + ' importado' + (nuevos !== 1 ? 's' : '');
+          if (omitidos > 0) msg += ' \u00b7 ' + omitidos + ' ya exist\u00eda' + (omitidos !== 1 ? 'n' : '');
           toast(msg);
-        }).catch(function(e){ toast('Sin acceso al portapapeles: '+e.message); });
+        }).catch(function(e) { toast('Sin acceso al portapapeles: ' + e.message); });
       }
 
       function exportarASheets() {
-        if (registros.length===0) { toast('No hay registros para copiar.'); return; }
+        if (registros.length === 0) { toast('No hay registros para copiar.'); return; }
         var filas = [];
-        for (var i=0;i<registros.length;i++) {
-          var r=registros[i];
-          filas.push((r.presentacion||'').replace(/\t/g,' ').replace(/\n/g,' ') + '\t' + (r.detalles||'').replace(/\t/g,' ').replace(/\n/g,' '));
+        for (var i = 0; i < registros.length; i++) {
+          var r = registros[i];
+          filas.push(
+            (r.presentacion || '').replace(/\t/g, ' ').replace(/\n/g, ' ') + '\t' +
+            (r.detalles     || '').replace(/\t/g, ' ').replace(/\n/g, ' ')
+          );
         }
-        navigator.clipboard.writeText(filas.join('\n')).then(function(){
-          toast(registros.length+' filas copiadas. Pega con Ctrl+V en tu hoja.');
-        }).catch(function(){ toast('No se pudo copiar al portapapeles.'); });
+        navigator.clipboard.writeText(filas.join('\n')).then(function() {
+          toast(registros.length + ' filas copiadas. Pega con Ctrl+V en tu hoja.');
+        }).catch(function() { toast('No se pudo copiar al portapapeles.'); });
       }
 
+
+      /* ============================================================
+         STORAGE — GUARDAR / CARGAR / BACKUP
+         ============================================================ */
       function actualizarStorageBar() {
         try {
-          var raw=localStorage.getItem(STORAGE_KEY)||'';
-          var bytes=raw.length*2; var kb=(bytes/1024).toFixed(1);
-          var el=document.getElementById('storage-size'); if(!el)return;
-          el.innerHTML='&#128190; '+kb+' KB';
-          el.className=bytes>3145728?'danger':(bytes>1572864?'warn':'');
-        } catch(e){}
+          var raw   = localStorage.getItem(STORAGE_KEY) || '';
+          var bytes = raw.length * 2;
+          var kb    = (bytes / 1024).toFixed(1);
+          var el    = document.getElementById('storage-size');
+          if (!el) return;
+          el.innerHTML = '&#128190; ' + kb + ' KB';
+          el.className = bytes > 3145728 ? 'danger' : (bytes > 1572864 ? 'warn' : '');
+        } catch(e) {}
       }
 
       function exportarBackup() {
         try {
-          var raw=localStorage.getItem(STORAGE_KEY)||'[]';
-          var blob=new Blob([raw],{type:'application/json'});
-          var url=URL.createObjectURL(blob); var a=document.createElement('a');
-          var d=new Date();
-          a.href=url; a.download='qr-registro-backup-'+d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0')+'.json';
-          document.body.appendChild(a); a.click(); document.body.removeChild(a); URL.revokeObjectURL(url);
+          var raw  = localStorage.getItem(STORAGE_KEY) || '[]';
+          var blob = new Blob([raw], { type: 'application/json' });
+          var url  = URL.createObjectURL(blob);
+          var a    = document.createElement('a');
+          var d    = new Date();
+          a.href     = url;
+          a.download = 'qr-registro-backup-' + d.getFullYear() + '-' +
+            String(d.getMonth() + 1).padStart(2, '0') + '-' +
+            String(d.getDate()).padStart(2, '0') + '.json';
+          document.body.appendChild(a);
+          a.click();
+          document.body.removeChild(a);
+          URL.revokeObjectURL(url);
           toast('Backup descargado.');
-        } catch(e){ toast('Error al exportar: '+e.message); }
+        } catch(e) { toast('Error al exportar: ' + e.message); }
       }
 
       function importarBackup(input) {
-        var file=input.files[0]; if(!file)return;
-        var reader=new FileReader();
-        reader.onload=function(e){
+        var file = input.files[0];
+        if (!file) return;
+        var reader = new FileReader();
+        reader.onload = function(e) {
           try {
-            var datos=JSON.parse(e.target.result);
-            if(!Array.isArray(datos)) throw new Error('Formato invalido');
-            var nuevos=0;
-            for(var i=0;i<datos.length;i++){
-              var existe=false;
-              for(var j=0;j<registros.length;j++){if(registros[j].id===datos[i].id){existe=true;break;}}
-              if(!existe){registros.push(datos[i]);nuevos++;}
+            var datos = JSON.parse(e.target.result);
+            if (!Array.isArray(datos)) throw new Error('Formato invalido');
+            var nuevos = 0;
+            for (var i = 0; i < datos.length; i++) {
+              var existe = false;
+              for (var j = 0; j < registros.length; j++) {
+                if (registros[j].id === datos[i].id) { existe = true; break; }
+              }
+              if (!existe) { registros.push(datos[i]); nuevos++; }
             }
-            guardarEnStorage(); renderList(); actualizarStorageBar();
-            toast(nuevos+' registros importados del backup.');
-          } catch(err){ toast('Error al cargar backup: '+err.message); }
-          input.value='';
+            guardarEnStorage();
+            renderList();
+            actualizarStorageBar();
+            toast(nuevos + ' registros importados del backup.');
+          } catch(err) { toast('Error al cargar backup: ' + err.message); }
+          input.value = '';
         };
         reader.readAsText(file);
       }
 
       function ordenarRegistros() {
-        registros.sort(function(a,b){
-          var na=parseFloat(a.presentacion)||0; var nb=parseFloat(b.presentacion)||0;
-          if(na!==nb) return nb-na;
+        registros.sort(function(a, b) {
+          var na = parseFloat(a.presentacion) || 0;
+          var nb = parseFloat(b.presentacion) || 0;
+          if (na !== nb) return nb - na;
           return b.presentacion.localeCompare(a.presentacion);
         });
       }
 
       function guardarEnStorage() {
         ordenarRegistros();
-        localStorage.setItem(STORAGE_KEY,JSON.stringify(registros));
-        actualizarStorageBar();
-      }
-      function cargarDesdeStorage() {
-        try { var raw=localStorage.getItem(STORAGE_KEY); registros=raw?JSON.parse(raw):[]; ordenarRegistros(); }
-        catch(e){ registros=[]; }
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(registros));
         actualizarStorageBar();
       }
 
+      function cargarDesdeStorage() {
+        try {
+          var raw = localStorage.getItem(STORAGE_KEY);
+          registros = raw ? JSON.parse(raw) : [];
+          ordenarRegistros();
+        } catch(e) { registros = []; }
+        actualizarStorageBar();
+      }
+
+
+      /* ============================================================
+         UTILIDADES
+         ============================================================ */
       function limpiarFormulario() {
-        document.getElementById('txtPresentacion').value='20261100';
-        document.getElementById('txtDetalles').value='';
-        fileInput.value=''; qrTexto=''; qrBadge.classList.remove('show');
+        var campo = document.getElementById('txtPresentacion');
+        campo.value = '20261100';
+        campo.classList.remove('input-duplicado');
+        document.getElementById('txtDetalles').value = '';
+        fileInput.value = '';
+        qrTexto = '';
+        qrBadge.classList.remove('show');
       }
 
       var toastTimer;
       function toast(msg) {
-        var el=document.getElementById('toast'); el.innerHTML=msg; el.classList.add('show');
-        clearTimeout(toastTimer); toastTimer=setTimeout(function(){ el.classList.remove('show'); },2800);
+        var el = document.getElementById('toast');
+        el.innerHTML = msg;
+        el.classList.add('show');
+        clearTimeout(toastTimer);
+        toastTimer = setTimeout(function() { el.classList.remove('show'); }, 2800);
       }
 
       function esc(s) {
         return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
       }
+
     </script>
 
     <script>
@@ -760,7 +1136,6 @@
         navigator.serviceWorker.register("/sw.js");
       }
     </script>
-
 
   </body>
 </html>
