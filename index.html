@@ -259,6 +259,60 @@
       .storage-btn { background: none; border: 1px solid var(--border); border-radius: 5px; color: var(--text-muted); font-size: 0.68rem; padding: 2px 7px; cursor: pointer; font-family: 'JetBrains Mono', monospace; transition: all 0.15s; white-space: nowrap; }
       .storage-btn:hover { border-color: var(--accent); color: var(--accent); }
 
+      /* ── Botón Limpiar todo ── */
+      .storage-btn-clear {
+        background: none; border: 1px solid rgba(239,68,68,0.4);
+        border-radius: 5px; color: var(--red); font-size: 0.68rem;
+        padding: 2px 7px; cursor: pointer;
+        font-family: 'JetBrains Mono', monospace; transition: all 0.15s; white-space: nowrap;
+        opacity: 0.75;
+      }
+      .storage-btn-clear:hover { border-color: var(--red); opacity: 1; background: rgba(239,68,68,0.06); }
+      .storage-btn-clear:active { border-width: 2px; }
+
+      /* ── Modal de confirmación ── */
+      #confirm-overlay {
+        display: none; position: fixed; inset: 0; z-index: 1000;
+        background: rgba(0,0,0,0.55); backdrop-filter: blur(4px);
+        align-items: center; justify-content: center;
+      }
+      #confirm-overlay.show { display: flex; animation: fade-in 0.18s ease; }
+      #confirm-box {
+        background: var(--surface); border: 1px solid var(--border-lit);
+        border-radius: 16px; padding: 28px 28px 22px;
+        max-width: 340px; width: 90%; box-shadow: 0 20px 60px rgba(0,0,0,0.5);
+        display: flex; flex-direction: column; gap: 14px;
+      }
+      #confirm-box .confirm-icon { font-size: 2rem; text-align: center; }
+      #confirm-box .confirm-title {
+        font-size: 1rem; font-weight: 700; text-align: center; color: var(--text);
+      }
+      #confirm-box .confirm-desc {
+        font-size: 0.82rem; color: var(--text-muted); text-align: center; line-height: 1.6;
+      }
+      #confirm-box .confirm-count {
+        font-size: 0.78rem; font-family: 'JetBrains Mono', monospace;
+        color: var(--red); text-align: center; font-weight: 600;
+        background: rgba(239,68,68,0.08); border: 1px solid rgba(239,68,68,0.2);
+        border-radius: 8px; padding: 6px 12px;
+      }
+      #confirm-box .confirm-actions { display: flex; gap: 10px; margin-top: 4px; }
+      #confirm-box .btn-confirm-cancel {
+        flex: 1; padding: 9px; border-radius: 9px; border: 1px solid var(--border);
+        background: transparent; color: var(--text-dim); font-family: 'Outfit', sans-serif;
+        font-size: 0.86rem; font-weight: 600; cursor: pointer; transition: all 0.15s;
+      }
+      #confirm-box .btn-confirm-cancel:hover { border-color: var(--border-lit); color: var(--text); }
+      #confirm-box .btn-confirm-ok {
+        flex: 1; padding: 9px; border-radius: 9px; border: none;
+        background: linear-gradient(135deg, #dc2626, #ef4444);
+        color: #fff; font-family: 'Outfit', sans-serif;
+        font-size: 0.86rem; font-weight: 700; cursor: pointer;
+        box-shadow: 0 4px 14px rgba(239,68,68,0.3); transition: all 0.15s;
+      }
+      #confirm-box .btn-confirm-ok:hover { box-shadow: 0 4px 22px rgba(239,68,68,0.5); }
+      #confirm-box .btn-confirm-ok:active { transform: scale(0.97); }
+
       #theme-toggle { background: none; border: 1px solid var(--border); border-radius: 5px; cursor: pointer; font-size: 0.9rem; padding: 1px 6px; line-height: 1.4; transition: all 0.2s; user-select: none; }
       #theme-toggle:hover { border-color: var(--accent); transform: scale(1.15); }
 
@@ -314,7 +368,6 @@
       <div class="card">
         <div class="list-header">
           <div style="display:flex;align-items:center;gap:8px;">
-            <!-- Botón de ordenar reemplaza la etiqueta estática -->
             <button class="btn-sort" id="btnOrdenar" onclick="ordenarYRenderizar()" title="Ordenar por bloques de estado">
               <span class="sort-icon">⇅</span> Ordenar registros
             </button>
@@ -342,11 +395,31 @@
 
     </div>
 
+    <!-- ── Modal de confirmación para Limpiar todo ── -->
+    <div id="confirm-overlay">
+      <div id="confirm-box">
+        <div class="confirm-icon">&#128465;&#65039;</div>
+        <div class="confirm-title">¿Limpiar todos los registros?</div>
+        <div class="confirm-desc">
+          Esta acción eliminará permanentemente todos los registros y vaciará el almacenamiento local.<br>
+          <strong style="color:var(--text)">No se puede deshacer.</strong>
+        </div>
+        <div class="confirm-count" id="confirm-count">0 registros se eliminarán</div>
+        <div class="confirm-actions">
+          <button class="btn-confirm-cancel" onclick="cerrarConfirm()">Cancelar</button>
+          <button class="btn-confirm-ok"     onclick="confirmarLimpiarTodo()">Sí, limpiar todo</button>
+        </div>
+      </div>
+    </div>
+
     <div id="storage-bar">
+      <!-- ✨ Botón Limpiar todo — antes del indicador de peso -->
+      <button class="storage-btn-clear" onclick="abrirConfirm()" title="Limpiar todos los registros">✨</button>
+      <div class="bar-sep"></div>
       <span id="storage-size">&#128190; --</span>
       <div class="bar-sep"></div>
-      <button class="storage-btn" onclick="exportarBackup()">&#11015; Backup</button>
-      <button class="storage-btn" onclick="document.getElementById('importBackupFile').click()">&#11014; Cargar</button>
+      <button class="storage-btn" onclick="exportarBackup()">⬇Backup</button>
+      <button class="storage-btn" onclick="document.getElementById('importBackupFile').click()">⬆Cargar</button>
       <input type="file" id="importBackupFile" accept=".json" style="display:none" onchange="importarBackup(this)">
       <div class="bar-sep"></div>
       <button id="theme-toggle" onclick="toggleTema()" title="Cambiar tema">&#127769;</button>
@@ -377,124 +450,42 @@
 
       /* ============================================================
          DEFINICIÓN DE ESTADOS
-         ─────────────────────────────────────────────────────────────
-         El ORDEN en este array define:
-           1) El orden de los bloques al ordenar la lista
-           2) El ciclo del selector manual (◀ ▶)
          ============================================================ */
       var ESTADOS = [
 
-        /* ── Documento ingresado — verde muy claro ── */
-        {
-          id:            'docinicio',
-          label:         'Ingresado',
-          palabrasClave: ['documento ingresado', 'proceso iniciado'],
-          barColor:      '#bbf7d0',
-          badgeGradient: 'linear-gradient(135deg, #4ade80, #bbf7d0)'
-        },
-               
-        /* ── En calificación — ámbar ── */
-        {
-          id:            'calificacion',
-          label:         'En calificación',
-          palabrasClave: ['calificaci'],
-          barColor:      '#f59e0b',
-          badgeGradient: 'linear-gradient(135deg, #d97706, #f59e0b)'
-        },
-
-        /* ── Escaneo administrativo — verde medio ── */
-        {
-          id:            'escaneoadm',
-          label:         'Escaneo adm.',
-          palabrasClave: ['escaneo de expediente', 'escaneo administrativo', 'generando escaneo'],
-          barColor:      '#4ade80',
-          badgeGradient: 'linear-gradient(135deg, #16a34a, #4ade80)'
-        },
-
-        /* ── Asesoría — azul claro ── */
-        {
-          id:            'asesoria',
-          label:         'Asesoría',
-          palabrasClave: ['asesoria'],
-          barColor:      '#60a5fa',
-          badgeGradient: 'linear-gradient(135deg, #f87171, #fca5a5)'
-        },
-
-        /* ── Catastro — morado ── */
-        {
-          id:            'catastro',
-          label:         'Catastro',
-          palabrasClave: ['catastro'],
-          barColor:      '#a855f7',
-          badgeGradient: 'linear-gradient(135deg, #7c3aed, #a855f7)'
-        },
-
-        /* ── Observada — rojo ── */
-        {
-          id:            'observada',
-          label:         'Observada',
-          palabrasClave: ['ver notificaci', 'correo electr', 'notificad', 'observad'],
-          barColor:      '#ef4444',
-          badgeGradient: 'linear-gradient(135deg, #dc2626, #ef4444)'
-        },
-
-        /* ── Inscrita en despacho — verde oscuro ── */
-        {
-          id:            'inscritaendespacho',
-          label:         'En despacho',
-          palabrasClave: ['listo para su entrega', 'inscrito y listo'],
-          barColor:      '#15803d',
-          badgeGradient: 'linear-gradient(135deg, #14532d, #15803d)'
-        },
-
-        /* ── Retirado — gris claro ── */
-        {
-          id:            'inscritaretirada',
-          label:         'Retirada',
-          palabrasClave: ['fue retirado', 'retirado por'],
-          barColor:      '#94a3b8',
-          badgeGradient: 'linear-gradient(135deg, #64748b, #94a3b8)'
-        },
-
-        /* ── Sin categoría — neutro, sin color de borde ── */
-        {
-          id:            'sincategoria',
-          label:         'Sin categoría',
-          palabrasClave: [],          // nunca se detecta automáticamente
-          barColor:      'transparent',
-          badgeGradient: 'linear-gradient(135deg, var(--accent), #6366f1)'
-        }
+        { id: 'docinicio',         label: 'Ingresado',      palabrasClave: ['documento ingresado', 'proceso iniciado'], barColor: '#bbf7d0', badgeGradient: 'linear-gradient(135deg, #4ade80, #bbf7d0)' },
+        { id: 'calificacion',      label: 'En calificación',palabrasClave: ['calificaci'],                              barColor: '#f59e0b', badgeGradient: 'linear-gradient(135deg, #d97706, #f59e0b)' },
+        { id: 'escaneoadm',        label: 'Escaneo adm.',   palabrasClave: ['escaneo de expediente', 'escaneo administrativo', 'generando escaneo'], barColor: '#4ade80', badgeGradient: 'linear-gradient(135deg, #16a34a, #4ade80)' },
+        { id: 'asesoria',          label: 'Asesoría',       palabrasClave: ['asesoria'],                                barColor: '#60a5fa', badgeGradient: 'linear-gradient(135deg, #f87171, #fca5a5)' },
+        { id: 'catastro',          label: 'Catastro',       palabrasClave: ['catastro'],                                barColor: '#a855f7', badgeGradient: 'linear-gradient(135deg, #7c3aed, #a855f7)' },
+        { id: 'observada',         label: 'Observada',      palabrasClave: ['ver notificaci', 'correo electr', 'notificad', 'observad'], barColor: '#ef4444', badgeGradient: 'linear-gradient(135deg, #dc2626, #ef4444)' },
+        { id: 'inscritaendespacho',label: 'En despacho',    palabrasClave: ['listo para su entrega', 'inscrito y listo'],barColor: '#15803d', badgeGradient: 'linear-gradient(135deg, #14532d, #15803d)' },
+        { id: 'inscritaretirada',  label: 'Retirada',       palabrasClave: ['fue retirado', 'retirado por'],            barColor: '#94a3b8', badgeGradient: 'linear-gradient(135deg, #64748b, #94a3b8)' },
+        { id: 'sincategoria',      label: 'Sin categoría',  palabrasClave: [],                                          barColor: 'transparent', badgeGradient: 'linear-gradient(135deg, var(--accent), #6366f1)' }
 
       ];
 
-      /* Índice de bloque para ordenar: docinicio=0 … sincategoria=7 */
       var ORDEN_BLOQUE = {};
       for (var _i = 0; _i < ESTADOS.length; _i++) {
         ORDEN_BLOQUE[ESTADOS[_i].id] = _i;
       }
-      /* Los que no tienen estado conocido van al bloque de sincategoria */
       var BLOQUE_SIN_ESTADO = ESTADOS.length - 1;
 
 
       /* ============================================================
          DETECCIÓN DE ESTADO
-         Prioridad: 1) estadoManual   2) datos CNR   3) null
          ============================================================ */
       function detectarEstado(r) {
-
-        // 1) Estado forzado manualmente
         if (r.estadoManual) {
           for (var i = 0; i < ESTADOS.length; i++) {
             if (ESTADOS[i].id === r.estadoManual) return ESTADOS[i];
           }
         }
-
-        // 2) Detectar desde texto CNR
         if (!r.cnr || !r.cnr.estado) return null;
         var estadoTexto = r.cnr.estado.toLowerCase();
         for (var i = 0; i < ESTADOS.length; i++) {
           var def = ESTADOS[i];
-          if (def.palabrasClave.length === 0) continue; // sincategoria nunca se auto-detecta
+          if (def.palabrasClave.length === 0) continue;
           for (var j = 0; j < def.palabrasClave.length; j++) {
             if (estadoTexto.indexOf(def.palabrasClave[j]) >= 0) return def;
           }
@@ -502,10 +493,6 @@
         return null;
       }
 
-
-      /* ============================================================
-         BLOQUE DE ORDEN para un registro
-         ============================================================ */
       function bloqueDeOrden(r) {
         var estado = detectarEstado(r);
         if (!estado) return BLOQUE_SIN_ESTADO;
@@ -515,42 +502,66 @@
 
 
       /* ============================================================
-         ORDENAR Y RENDERIZAR — accionado por el botón
-         ─────────────────────────────────────────────────────────────
-         Ordena registros[] por:
-           1) Bloque de estado (según ESTADOS)
-           2) Número de presentación descendente dentro del bloque
+         ORDENAR Y RENDERIZAR
          ============================================================ */
       function ordenarYRenderizar() {
         var btn = document.getElementById('btnOrdenar');
         if (btn) { btn.classList.add('sorting'); }
-
-        // Pequeño timeout para que la animación del ícono sea visible
         setTimeout(function() {
           registros.sort(function(a, b) {
             var bA = bloqueDeOrden(a);
             var bB = bloqueDeOrden(b);
             if (bA !== bB) return bA - bB;
-            // Dentro del mismo bloque: descendente por número de presentación
             var nA = parseFloat(a.presentacion) || 0;
             var nB = parseFloat(b.presentacion) || 0;
             if (nA !== nB) return nB - nA;
             return b.presentacion.localeCompare(a.presentacion);
           });
-
           guardarEnStorage();
           renderList();
           toast('Lista ordenada por estado.');
-
-          if (btn) {
-            setTimeout(function() { btn.classList.remove('sorting'); }, 400);
-          }
+          if (btn) { setTimeout(function() { btn.classList.remove('sorting'); }, 400); }
         }, 120);
       }
 
 
       /* ============================================================
-         CAMBIO DE ESTADO MANUAL — sin redibujar toda la lista
+         LIMPIAR TODO — confirmación + ejecución
+         ============================================================ */
+      function abrirConfirm() {
+        var countEl = document.getElementById('confirm-count');
+        var n       = registros.length;
+        countEl.textContent = n + ' registro' + (n !== 1 ? 's' : '') + ' se eliminar' + (n !== 1 ? 'án' : 'á');
+        document.getElementById('confirm-overlay').classList.add('show');
+      }
+
+      function cerrarConfirm() {
+        document.getElementById('confirm-overlay').classList.remove('show');
+      }
+
+      function confirmarLimpiarTodo() {
+        registros = [];
+        localStorage.removeItem(STORAGE_KEY);
+        actualizarStorageBar();
+        renderList();
+        limpiarBusqueda();
+        cerrarConfirm();
+        toast('&#10024; Todos los registros eliminados.');
+      }
+
+      /* Cerrar modal al hacer click fuera del cuadro */
+      document.getElementById('confirm-overlay').addEventListener('click', function(e) {
+        if (e.target === this) cerrarConfirm();
+      });
+
+      /* Cerrar con Escape */
+      document.addEventListener('keydown', function(e) {
+        if (e.key === 'Escape') cerrarConfirm();
+      });
+
+
+      /* ============================================================
+         CAMBIO DE ESTADO MANUAL
          ============================================================ */
       function cambiarEstadoManual(id, delta) {
         var r = null;
@@ -558,7 +569,6 @@
           if (registros[i].id === id) { r = registros[i]; break; }
         }
         if (!r) return;
-
         var estadoActual = detectarEstado(r);
         var idxActual    = -1;
         if (estadoActual) {
@@ -566,11 +576,9 @@
             if (ESTADOS[i].id === estadoActual.id) { idxActual = i; break; }
           }
         }
-
         var total    = ESTADOS.length;
         var idxNuevo = ((idxActual + delta) % total + total) % total;
         r.estadoManual = ESTADOS[idxNuevo].id;
-
         guardarEnStorage();
         aplicarColorTarjeta(id, ESTADOS[idxNuevo]);
         actualizarSlider(id, r);
@@ -596,7 +604,6 @@
         if (badge) {
           badge.classList.remove('estado-observada');
           badge.style.borderColor = '';
-          // texto siempre neutro — nunca se toca badge.style.color
           if (estado) {
             if (estado.id === 'observada') {
               badge.classList.add('estado-observada');
@@ -611,7 +618,6 @@
         var nombre  = document.getElementById('slider-nombre-'  + id);
         var origen  = document.getElementById('slider-origen-'  + id);
         if (!nombre || !origen) return;
-
         var estado = detectarEstado(r);
         if (estado) {
           nombre.textContent  = estado.label;
@@ -718,9 +724,7 @@
       function agregarRegistro() {
         var presentacion = document.getElementById('txtPresentacion').value.trim();
         var detalles     = document.getElementById('txtDetalles').value.trim();
-
         if (!presentacion) { toast('Ingresa el N° de Presentación.'); return; }
-
         for (var i = 0; i < registros.length; i++) {
           if (registros[i].presentacion === presentacion) {
             toast('⚠️ El N° ' + presentacion + ' ya está en la lista.');
@@ -728,14 +732,13 @@
             return;
           }
         }
-
         registros.push({
           id:            Date.now(),
           presentacion:  presentacion,
           detalles:      detalles,
           qr:            qrTexto || '',
           cnr:           null,
-          estadoManual:  'docinicio',   // ← los agregados manualmente nacen como Ingresado
+          estadoManual:  'docinicio',
           fecha:         new Date().toLocaleString('es-SV', { dateStyle: 'short', timeStyle: 'short' })
         });
         guardarEnStorage();
@@ -789,7 +792,6 @@
             var pres = elPres.value.trim();
             if (pres) registros[i].presentacion = pres;
             registros[i].detalles = elDet.value.trim();
-            // Si hay un QR escaneado en la bandeja, lo anexa al registro y limpia
             if (qrTexto) {
               registros[i].qr = qrTexto;
               qrTexto = '';
@@ -863,7 +865,6 @@
         var bloque = document.createElement('div');
         bloque.className = 'cnr-block';
         bloque.id = 'cnr-block-' + r.id;
-
         if (!r.cnr) {
           var vacio = document.createElement('div');
           vacio.className = 'cnr-empty';
@@ -871,7 +872,6 @@
           bloque.appendChild(vacio);
           return bloque;
         }
-
         function agregarFila(contenedor, etiqueta, valor) {
           if (!valor) return;
           var fila = document.createElement('div');
@@ -886,33 +886,27 @@
           fila.appendChild(val);
           contenedor.appendChild(fila);
         }
-
         var tituloGeneral = document.createElement('div');
         tituloGeneral.className = 'cnr-section-title';
         tituloGeneral.textContent = 'Datos generales';
         bloque.appendChild(tituloGeneral);
-
         var filasGenerales = document.createElement('div');
         filasGenerales.className = 'cnr-rows';
         bloque.appendChild(filasGenerales);
-
         agregarFila(filasGenerales, 'Matrícula',    r.cnr.matricula);
         agregarFila(filasGenerales, 'Presentación', r.cnr.presentacion);
         agregarFila(filasGenerales, 'Fecha pres.',  r.cnr.fechaPres);
         agregarFila(filasGenerales, 'Dirección',    r.cnr.direccion);
         agregarFila(filasGenerales, 'Ubicación',    r.cnr.ubicacion);
         agregarFila(filasGenerales, 'Acto',         r.cnr.acto);
-
         var tituloEstado = document.createElement('div');
         tituloEstado.className = 'cnr-section-title';
         tituloEstado.style.borderTop = '1px solid var(--border)';
         tituloEstado.textContent = 'Estado jurídico';
         bloque.appendChild(tituloEstado);
-
         var filasEstado = document.createElement('div');
         filasEstado.className = 'cnr-rows';
         bloque.appendChild(filasEstado);
-
         if (r.cnr.estado) {
           var filaEstado = document.createElement('div');
           filaEstado.className = 'cnr-row';
@@ -926,10 +920,8 @@
           filaEstado.appendChild(valEstado);
           filasEstado.appendChild(filaEstado);
         }
-
         agregarFila(filasEstado, 'Fecha estado', r.cnr.fechaEstado);
         agregarFila(filasEstado, 'Actualizado',  r.cnr.fechaSync);
-
         return bloque;
       }
 
@@ -938,59 +930,42 @@
          RENDER — SELECTOR DE ESTADO DESLIZABLE
          ============================================================ */
       function renderEstadoSlider(r) {
-        var estado = detectarEstado(r);
-
+        var estado  = detectarEstado(r);
         var wrapper = document.createElement('div');
         wrapper.className = 'estado-slider';
-
         var btnIzq = document.createElement('button');
         btnIzq.className = 'estado-slider-btn';
         btnIzq.innerHTML = '&#9664;';
         btnIzq.title = 'Estado anterior';
-        (function(id) {
-          btnIzq.onclick = function() { cambiarEstadoManual(id, -1); };
-        })(r.id);
+        (function(id) { btnIzq.onclick = function() { cambiarEstadoManual(id, -1); }; })(r.id);
         wrapper.appendChild(btnIzq);
-
         var display = document.createElement('div');
         display.className = 'estado-slider-display';
         display.id = 'slider-display-' + r.id;
-
         var nombre = document.createElement('span');
         nombre.className = 'estado-slider-nombre';
         nombre.id = 'slider-nombre-' + r.id;
         nombre.textContent = estado ? estado.label : 'Sin estado';
-        nombre.style.color = estado
-          ? ((estado.barColor === 'transparent') ? 'var(--text-muted)' : estado.barColor)
-          : 'var(--text-muted)';
-
+        nombre.style.color = estado ? ((estado.barColor === 'transparent') ? 'var(--text-muted)' : estado.barColor) : 'var(--text-muted)';
         var origen = document.createElement('span');
         origen.className = 'estado-slider-origen';
         origen.id = 'slider-origen-' + r.id;
         origen.textContent = r.estadoManual ? 'manual' : (estado ? 'cnr' : '');
-
         display.appendChild(nombre);
         display.appendChild(origen);
         wrapper.appendChild(display);
-
         var btnDer = document.createElement('button');
         btnDer.className = 'estado-slider-btn';
         btnDer.innerHTML = '&#9654;';
         btnDer.title = 'Estado siguiente';
-        (function(id) {
-          btnDer.onclick = function() { cambiarEstadoManual(id, +1); };
-        })(r.id);
+        (function(id) { btnDer.onclick = function() { cambiarEstadoManual(id, +1); }; })(r.id);
         wrapper.appendChild(btnDer);
-
         var btnReset = document.createElement('button');
         btnReset.className = 'estado-slider-reset';
         btnReset.innerHTML = '&#8635;';
         btnReset.title = 'Quitar estado manual (volver a CNR)';
-        (function(id) {
-          btnReset.onclick = function() { limpiarEstadoManual(id); };
-        })(r.id);
+        (function(id) { btnReset.onclick = function() { limpiarEstadoManual(id); }; })(r.id);
         wrapper.appendChild(btnReset);
-
         return wrapper;
       }
 
@@ -1002,7 +977,6 @@
         var list  = document.getElementById('registro-list');
         var count = document.getElementById('list-count');
         count.textContent = registros.length;
-
         if (registros.length === 0) {
           list.innerHTML = '';
           var empty = document.createElement('div');
@@ -1011,15 +985,11 @@
           list.appendChild(empty);
           return;
         }
-
         list.innerHTML = '';
-
         for (var i = 0; i < registros.length; i++) {
           var r      = registros[i];
-          var num    = String(registros.length - i).padStart(2, '0');
           var estado = detectarEstado(r);
-
-          var item = document.createElement('div');
+          var item   = document.createElement('div');
           item.className = 'item';
           item.id = 'item-' + r.id;
 
@@ -1029,8 +999,6 @@
           if (estado && estado.barColor !== 'transparent') {
             bar.style.borderLeftColor = estado.barColor;
           }
-
-          // Badge número de presentación — solo borde indica estado, texto siempre neutro
           var numBadge = document.createElement('div');
           numBadge.className = 'item-num';
           numBadge.id = 'num-badge-' + r.id;
@@ -1045,12 +1013,9 @@
           numBadge.style.cursor = 'pointer';
           (function(id) { numBadge.onclick = function() { toggleItem(id); }; })(r.id);
           bar.appendChild(numBadge);
-
-          // Spacer que empuja los botones a la derecha
           var spacer = document.createElement('div');
           spacer.style.flex = '1';
           bar.appendChild(spacer);
-
           var btnLink = document.createElement('button');
           btnLink.className = 'btn-sm link-btn';
           if (r.qr) {
@@ -1063,103 +1028,84 @@
             (function(pres) { btnLink.onclick = function() { abrirCNR(pres, ''); }; })(r.presentacion);
           }
           bar.appendChild(btnLink);
-
           var btnEliminar = document.createElement('button');
           btnEliminar.className = 'btn-sm danger';
           btnEliminar.title = 'Eliminar';
           btnEliminar.innerHTML = '&#x2715;';
           (function(id) { btnEliminar.onclick = function() { eliminarRegistro(id); }; })(r.id);
           bar.appendChild(btnEliminar);
-
           item.appendChild(bar);
 
           /* ── Cuerpo colapsado ── */
           var body = document.createElement('div');
           body.className = 'item-body collapsed';
           body.id = 'body-' + r.id;
-
           if (r.detalles) {
             var detDiv = document.createElement('div');
             detDiv.className = 'item-detalles';
             detDiv.textContent = r.detalles;
             body.appendChild(detDiv);
           }
-
           body.appendChild(renderEstadoSlider(r));
 
-          /* Panel de edición */
           var editWrap = document.createElement('div');
           editWrap.className = 'edit-wrap';
           editWrap.id = 'edit-wrap-' + r.id;
-
           var lblPres = document.createElement('div');
           lblPres.className = 'edit-lbl edit-field-gap';
           lblPres.textContent = 'N° Presentación';
           editWrap.appendChild(lblPres);
-
           var inputPres = document.createElement('input');
           inputPres.type = 'text';
           inputPres.id = 'edit-pres-' + r.id;
           inputPres.placeholder = 'Número de presentación';
           inputPres.style.cssText = 'background:var(--surface);border:1px solid var(--accent);border-radius:8px;padding:8px 11px;color:var(--text);font-family:JetBrains Mono,monospace;font-size:0.85rem;outline:none;width:100%;margin-bottom:10px;';
           editWrap.appendChild(inputPres);
-
           var lblDet = document.createElement('div');
           lblDet.className = 'edit-lbl';
           lblDet.textContent = 'Detalles';
           editWrap.appendChild(lblDet);
-
           var textareaDet = document.createElement('textarea');
           textareaDet.id = 'edit-input-' + r.id;
           textareaDet.placeholder = 'Escribe los detalles...';
           textareaDet.style.cssText = 'background:var(--surface);border:1px solid var(--accent);border-radius:8px;padding:8px 11px;color:var(--text);font-family:Outfit,sans-serif;font-size:0.85rem;outline:none;width:100%;min-height:58px;resize:vertical;margin-top:4px;box-shadow:0 0 0 2px var(--accent-glow);';
           editWrap.appendChild(textareaDet);
-
           var editActions = document.createElement('div');
           editActions.className = 'edit-actions';
-
           var btnGuardar = document.createElement('button');
           btnGuardar.className = 'btn-sm save-btn';
           btnGuardar.innerHTML = '&#10003; Guardar';
           (function(id) { btnGuardar.onclick = function() { guardarDetalles(id); }; })(r.id);
           editActions.appendChild(btnGuardar);
-
           var btnCancelar = document.createElement('button');
           btnCancelar.className = 'btn-sm';
           btnCancelar.textContent = 'Cancelar';
           (function(id) { btnCancelar.onclick = function() { editarDetalles(id); }; })(r.id);
           editActions.appendChild(btnCancelar);
-
           editWrap.appendChild(editActions);
           body.appendChild(editWrap);
-
           body.appendChild(renderCNRBlock(r));
 
           var bottomRow = document.createElement('div');
           bottomRow.className = 'item-bottom-row';
-
           var btnPegar = document.createElement('button');
           btnPegar.className = 'btn-sm paste-btn';
           btnPegar.innerHTML = '&#128203; Pegar datos CNR';
           (function(id) { btnPegar.onclick = function() { pegarDesdeCNR(id); }; })(r.id);
           bottomRow.appendChild(btnPegar);
-
           var btnEditar = document.createElement('button');
           btnEditar.className = 'btn-sm edit-btn';
           btnEditar.innerHTML = '&#9998; Editar';
           (function(id) { btnEditar.onclick = function() { editarDetalles(id); }; })(r.id);
           bottomRow.appendChild(btnEditar);
-
           var timestamp = document.createElement('span');
           timestamp.className = 'item-timestamp';
           timestamp.innerHTML = '&#128336; ' + r.fecha;
           bottomRow.appendChild(timestamp);
-
           body.appendChild(bottomRow);
           item.appendChild(body);
           list.appendChild(item);
         }
-
         if (terminoBusqueda) aplicarFiltro();
       }
 
@@ -1171,10 +1117,8 @@
         var val = document.getElementById('txtPresentacion').value.trim();
         if (!val) return;
         terminoBusqueda = val.toLowerCase();
-        // NO toca el campo de búsqueda ni el botón ✕
-        // Filtrar sin abrir los ítems colapsados
-        var items   = document.querySelectorAll('#registro-list .item');
-        var countEl = document.getElementById('searchCount');
+        var items    = document.querySelectorAll('#registro-list .item');
+        var countEl  = document.getElementById('searchCount');
         var visibles = 0;
         items.forEach(function(item) {
           var id = item.id.replace('item-', '');
@@ -1195,7 +1139,6 @@
           ].join(' ').toLowerCase();
           if (haystack.indexOf(terminoBusqueda) >= 0) {
             item.classList.remove('hidden');
-            // NO abre el cuerpo — queda colapsado
             visibles++;
           } else {
             item.classList.add('hidden');
@@ -1214,7 +1157,6 @@
       }
 
       function buscar(termino) {
-        // Mantenida por compatibilidad — ya no se llama en oninput
         terminoBusqueda = termino.trim().toLowerCase();
         document.getElementById('searchClear').classList.toggle('visible', terminoBusqueda.length > 0);
         aplicarFiltro();
@@ -1276,34 +1218,26 @@
       function importarDeSheets() {
         navigator.clipboard.readText().then(function(texto) {
           if (!texto || texto.trim().length === 0) { toast('El portapapeles está vacío.'); return; }
-
           var lineas = texto.trim().split(/\r?\n/);
           var lineasValidas = [];
           var errores = [];
-
           for (var i = 0; i < lineas.length; i++) {
             var linea = lineas[i].trim();
             if (!linea) continue;
-
             var partes       = linea.split('\t');
             var presentacion = (partes[0] || '').trim();
             var detalles     = (partes[1] || '').trim();
-
             if (!/^\d{12}$/.test(presentacion)) {
               errores.push('Línea ' + (i + 1) + ': "' + presentacion + '" no es un número de 12 dígitos');
               continue;
             }
-
             lineasValidas.push({ presentacion: presentacion, detalles: detalles });
           }
-
           if (errores.length > 0) {
             toast('⚠️ Datos inválidos — revisa el portapapeles. Ej: ' + errores[0]);
             return;
           }
-
           if (lineasValidas.length === 0) { toast('Sin datos válidos en el portapapeles.'); return; }
-
           var nuevos = 0, omitidos = 0;
           for (var i = 0; i < lineasValidas.length; i++) {
             var existe = false;
@@ -1317,19 +1251,16 @@
               detalles:     lineasValidas[i].detalles,
               qr:           '',
               cnr:          null,
-              // Sin estadoManual → quedan sin categoría
               fecha:        new Date().toLocaleString('es-SV', { dateStyle: 'short', timeStyle: 'short' })
             });
             nuevos++;
           }
-
           guardarEnStorage();
           renderList();
           var msg = nuevos + ' importado' + (nuevos !== 1 ? 's' : '');
           if (omitidos > 0) msg += ' · ' + omitidos + ' duplicado' + (omitidos !== 1 ? 's' : '');
           if (errores.length > 0) msg += ' · ' + errores.length + ' inválido' + (errores.length !== 1 ? 's' : '');
           toast(msg);
-
         }).catch(function(e) { toast('Sin acceso al portapapeles: ' + e.message); });
       }
 
@@ -1409,8 +1340,6 @@
         reader.readAsText(file);
       }
 
-      /* guardarEnStorage ya NO ordena automáticamente —
-         el orden se preserva tal como está en registros[] */
       function guardarEnStorage() {
         localStorage.setItem(STORAGE_KEY, JSON.stringify(registros));
         actualizarStorageBar();
