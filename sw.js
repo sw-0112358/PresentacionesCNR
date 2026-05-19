@@ -4,8 +4,8 @@ self.addEventListener("install", (event) => {
     caches.open("app-cache").then((cache) => {
       return cache.addAll([
         "/",          // index.html
-        "/icono.jpg", // ícono
-        "/manifest.json"
+        "icono.jpg", // ícono
+        "manifest.json"
       ]);
     })
   );
