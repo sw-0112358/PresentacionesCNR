@@ -115,20 +115,27 @@
       .btn-import { background: linear-gradient(135deg,#6366f1,#8b5cf6); color: #fff; box-shadow: 0 4px 14px rgba(99,102,241,0.25); flex: 1; }
       .btn-import:hover { box-shadow: 0 4px 22px rgba(99,102,241,0.4); }
 
-      .btn-sm { display: inline-flex; align-items: center; gap: 5px; padding: 5px 11px; font-size: 0.76rem; border-radius: 7px; border: 1px solid var(--border); background: transparent; color: var(--text-dim); cursor: pointer; font-family: 'Outfit', sans-serif; font-weight: 500; transition: all 0.15s; white-space: nowrap; }
-      .btn-sm:hover            { border-color: var(--accent); color: var(--accent); }
-      .btn-sm.link-btn         { border-color: rgba(59,130,246,0.35); color: var(--accent); }
-      .btn-sm.link-btn:hover   { background: var(--accent-glow); }
-      .btn-sm.paste-btn        { border-color: rgba(245,158,11,0.4); color: #f59e0b; }
-      .btn-sm.paste-btn:hover  { background: rgba(245,158,11,0.1); }
-      .btn-sm.edit-btn         { border-color: rgba(99,102,241,0.4); color: #a78bfa; }
-      .btn-sm.edit-btn:hover   { background: rgba(99,102,241,0.1); }
-      .btn-sm.save-btn         { border-color: rgba(34,197,94,0.4); color: var(--green); }
-      .btn-sm.save-btn:hover   { background: var(--green-glow); }
-      .btn-sm.sheets-btn       { border-color: rgba(34,197,94,0.4); color: var(--green); }
-      .btn-sm.sheets-btn:hover { background: var(--green-glow); }
-      .btn-sm.danger           { border-color: rgba(239,68,68,0.4); color: var(--red); padding: 5px 9px; }
-      .btn-sm.danger:hover     { background: rgba(239,68,68,0.1); }
+      .btn-sm { display: inline-flex; align-items: center; gap: 5px; padding: 5px 11px; font-size: 0.76rem; border-radius: 7px; border: 1px solid var(--border); background: transparent; color: var(--text-dim); cursor: pointer; font-family: 'Outfit', sans-serif; font-weight: 500; transition: border-color 0.15s, color 0.15s; white-space: nowrap; }
+      .btn-sm:hover            { border-color: var(--accent); color: var(--accent); background: transparent; }
+      .btn-sm:active           { border-color: var(--accent); border-width: 2px; background: transparent; }
+      .btn-sm.link-btn         { border-color: rgba(59,130,246,0.5); color: var(--accent); }
+      .btn-sm.link-btn:hover   { border-color: var(--accent); background: transparent; }
+      .btn-sm.link-btn:active  { border-width: 2px; border-color: var(--accent); }
+      .btn-sm.paste-btn        { border-color: rgba(245,158,11,0.5); color: #f59e0b; }
+      .btn-sm.paste-btn:hover  { border-color: #f59e0b; background: transparent; }
+      .btn-sm.paste-btn:active { border-width: 2px; border-color: #f59e0b; }
+      .btn-sm.edit-btn         { border-color: rgba(99,102,241,0.5); color: #a78bfa; }
+      .btn-sm.edit-btn:hover   { border-color: #a78bfa; background: transparent; }
+      .btn-sm.edit-btn:active  { border-width: 2px; border-color: #a78bfa; }
+      .btn-sm.save-btn         { border-color: rgba(34,197,94,0.5); color: var(--green); }
+      .btn-sm.save-btn:hover   { border-color: var(--green); background: transparent; }
+      .btn-sm.save-btn:active  { border-width: 2px; border-color: var(--green); }
+      .btn-sm.sheets-btn       { border-color: rgba(34,197,94,0.5); color: var(--green); }
+      .btn-sm.sheets-btn:hover { border-color: var(--green); background: transparent; }
+      .btn-sm.sheets-btn:active{ border-width: 2px; border-color: var(--green); }
+      .btn-sm.danger           { border-color: rgba(239,68,68,0.5); color: var(--red); padding: 5px 9px; }
+      .btn-sm.danger:hover     { border-color: var(--red); background: transparent; }
+      .btn-sm.danger:active    { border-width: 2px; border-color: var(--red); }
 
       /* ── Botón de ordenar ── */
       .btn-sort {
@@ -159,9 +166,11 @@
       .item.hidden { display: none; }
 
       .item-bar { display: flex; align-items: center; gap: 8px; padding: 10px 14px; background: var(--surface); border-bottom: 1px solid var(--border); border-left: 3px solid transparent; transition: background 0.3s, border-left-color 0.3s; }
-      .item-num { width: 30px; height: 30px; flex-shrink: 0; background: linear-gradient(135deg, var(--accent), #6366f1); border-radius: 8px; display: flex; align-items: center; justify-content: center; font-family: 'JetBrains Mono', monospace; font-size: 0.68rem; font-weight: 500; color: #fff; box-shadow: 0 2px 8px rgba(59,130,246,0.3); cursor: pointer; user-select: none; transition: background 0.3s; }
-      .item-num:hover { opacity: 0.85; }
-      .item-presentacion-bar { font-family: 'JetBrains Mono', monospace; font-size: 0.85rem; font-weight: 600; color: var(--text); flex: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+      .item-num { flex-shrink: 0; background: transparent; border: 1.5px solid var(--border-lit); border-radius: 8px; display: inline-flex; align-items: center; justify-content: center; font-family: 'JetBrains Mono', monospace; font-size: 0.8rem; font-weight: 700; color: var(--text); padding: 3px 10px; user-select: none; transition: border-color 0.2s, box-shadow 0.2s; letter-spacing: 0.5px; white-space: nowrap; }
+      .item-num.estado-observada { border-color: #ef4444; box-shadow: 0 0 0 2px rgba(239,68,68,0.12); }
+      .item-presentacion-bar { display: none; }
+      .btn-toggle { display: inline-flex; align-items: center; justify-content: center; padding: 5px 8px; font-size: 0.76rem; border-radius: 7px; border: 1px solid var(--border); background: transparent; color: var(--text-muted); cursor: pointer; font-family: 'Outfit', sans-serif; transition: all 0.15s; white-space: nowrap; flex-shrink: 0; }
+      .btn-toggle:hover { border-color: var(--accent); color: var(--accent); }
 
       .item-body { padding: 12px 14px; display: flex; flex-direction: column; gap: 10px; }
       .item-body.collapsed { display: none; }
@@ -221,12 +230,17 @@
       .item-timestamp { font-size: 0.67rem; color: var(--text-muted); font-family: 'JetBrains Mono', monospace; }
       .item-bottom-row { display: flex; align-items: center; flex-wrap: wrap; gap: 6px; }
 
-      .search-wrap { position: relative; margin-bottom: 14px; }
-      .search-input { width: 100%; background: var(--surface2); border: 1px solid var(--border); border-radius: 10px; padding: 10px 36px 10px 14px; color: var(--text); font-family: 'Outfit', sans-serif; font-size: 0.9rem; outline: none; transition: border-color 0.18s, box-shadow 0.18s, background 0.3s; }
+      .search-wrap { position: relative; margin-bottom: 14px; display: flex; gap: 6px; align-items: center; }
+      .search-input { flex: 1; background: var(--surface2); border: 1px solid var(--border); border-radius: 10px; padding: 10px 14px; color: var(--text); font-family: 'Outfit', sans-serif; font-size: 0.9rem; outline: none; transition: border-color 0.18s, box-shadow 0.18s, background 0.3s; }
       .search-input:focus { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-glow); }
       .search-input::placeholder { color: var(--text-muted); }
-      .search-clear { position: absolute; right: 10px; top: 50%; transform: translateY(-50%); background: none; border: none; color: var(--text-muted); font-size: 1rem; cursor: pointer; padding: 4px; display: none; }
+      .search-btn { flex-shrink: 0; background: transparent; border: 1px solid rgba(59,130,246,0.5); border-radius: 9px; color: var(--accent); font-size: 1rem; padding: 8px 12px; cursor: pointer; transition: border-color 0.15s, border-width 0.1s; line-height: 1; }
+      .search-btn:hover { border-color: var(--accent); }
+      .search-btn:active { border-width: 2px; border-color: var(--accent); }
+      .search-clear { flex-shrink: 0; background: transparent; border: 1px solid rgba(239,68,68,0.5); border-radius: 9px; color: var(--red); font-size: 0.82rem; padding: 8px 10px; cursor: pointer; transition: border-color 0.15s, border-width 0.1s; display: none; line-height: 1; }
       .search-clear.visible { display: block; }
+      .search-clear:hover { border-color: var(--red); }
+      .search-clear:active { border-width: 2px; }
       .search-count { font-size: 0.7rem; color: var(--text-muted); margin-top: 6px; min-height: 16px; }
 
       #storage-bar {
@@ -271,8 +285,11 @@
         <div class="form-grid">
           <div class="field">
             <label>N&#176; de Presentaci&#243;n</label>
-            <input type="text" id="txtPresentacion" value="20261100"
-                   oninput="verificarDuplicado(this.value)">
+            <div style="display:flex;gap:6px;align-items:center;">
+              <input type="text" id="txtPresentacion" value="20261100"
+                     oninput="verificarDuplicado(this.value)" style="flex:1;">
+              <button class="btn-sm" onclick="filtrarDesdePresentacion()" title="Filtrar en la lista sin expandir" style="border-color:rgba(59,130,246,0.5);color:var(--accent);padding:9px 11px;font-size:0.9rem;">&#8628;</button>
+            </div>
           </div>
           <div class="field">
             <label>Detalles</label>
@@ -309,8 +326,9 @@
         </div>
         <div class="search-wrap">
           <input class="search-input" type="text" id="searchInput"
-                 placeholder="&#128269; Buscar por presentaci&#243;n, detalles, estado, matr&#237;cula&#8230;"
-                 oninput="buscar(this.value)">
+                 placeholder="Buscar por presentaci&#243;n, detalles, estado, matr&#237;cula&#8230;"
+                 onkeydown="if(event.key==='Enter') ejecutarBusqueda()">
+          <button class="search-btn" onclick="ejecutarBusqueda()" title="Buscar">&#128269;</button>
           <button class="search-clear" id="searchClear" onclick="limpiarBusqueda()" title="Limpiar">&#x2715;</button>
         </div>
         <div class="search-count" id="searchCount"></div>
@@ -429,10 +447,10 @@
           badgeGradient: 'linear-gradient(135deg, #64748b, #94a3b8)'
         },
 
-        /* ── Sin Estado — neutro, sin color de borde ── */
+        /* ── Sin categoría — neutro, sin color de borde ── */
         {
-          id:            'sinestado',
-          label:         'Sin estado',
+          id:            'sincategoria',
+          label:         'Sin categoría',
           palabrasClave: [],          // nunca se detecta automáticamente
           barColor:      'transparent',
           badgeGradient: 'linear-gradient(135deg, var(--accent), #6366f1)'
@@ -564,9 +582,20 @@
 
       function aplicarColorTarjeta(id, estado) {
         var bar   = document.querySelector('#item-' + id + ' .item-bar');
-        var badge = document.querySelector('#item-' + id + ' .item-num');
-        if (bar)   bar.style.borderLeftColor = estado ? estado.barColor      : 'transparent';
-        if (badge) badge.style.background    = estado ? estado.badgeGradient : 'linear-gradient(135deg, var(--accent), #6366f1)';
+        var badge = document.getElementById('num-badge-' + id);
+        if (bar) bar.style.borderLeftColor = (estado && estado.barColor !== 'transparent') ? estado.barColor : 'transparent';
+        if (badge) {
+          badge.classList.remove('estado-observada');
+          badge.style.borderColor = '';
+          // texto siempre neutro — nunca se toca badge.style.color
+          if (estado) {
+            if (estado.id === 'observada') {
+              badge.classList.add('estado-observada');
+            } else if (estado.barColor !== 'transparent') {
+              badge.style.borderColor = estado.barColor;
+            }
+          }
+        }
       }
 
       function actualizarSlider(id, r) {
@@ -916,7 +945,7 @@
         nombre.textContent = estado ? estado.label : 'Sin estado';
         nombre.style.color = estado
           ? ((estado.barColor === 'transparent') ? 'var(--text-muted)' : estado.barColor)
-        : 'var(--text-muted)';
+          : 'var(--text-muted)';
 
         var origen = document.createElement('span');
         origen.className = 'estado-slider-origen';
@@ -984,20 +1013,26 @@
             bar.style.borderLeftColor = estado.barColor;
           }
 
+          // Badge número de presentación — solo borde indica estado, texto siempre neutro
           var numBadge = document.createElement('div');
           numBadge.className = 'item-num';
-          numBadge.title = 'Expandir / Contraer';
-          numBadge.textContent = '#' + num;
-          if (estado && estado.barColor !== 'transparent') {
-            numBadge.style.background = estado.badgeGradient;
+          numBadge.id = 'num-badge-' + r.id;
+          numBadge.textContent = r.presentacion;
+          if (estado) {
+            if (estado.id === 'observada') {
+              numBadge.classList.add('estado-observada');
+            } else if (estado.barColor !== 'transparent') {
+              numBadge.style.borderColor = estado.barColor;
+            }
           }
+          numBadge.style.cursor = 'pointer';
           (function(id) { numBadge.onclick = function() { toggleItem(id); }; })(r.id);
           bar.appendChild(numBadge);
 
-          var presBar = document.createElement('div');
-          presBar.className = 'item-presentacion-bar';
-          presBar.textContent = r.presentacion;
-          bar.appendChild(presBar);
+          // Spacer que empuja los botones a la derecha
+          var spacer = document.createElement('div');
+          spacer.style.flex = '1';
+          bar.appendChild(spacer);
 
           var btnLink = document.createElement('button');
           btnLink.className = 'btn-sm link-btn';
@@ -1115,7 +1150,54 @@
       /* ============================================================
          BÚSQUEDA Y FILTRO
          ============================================================ */
+      function filtrarDesdePresentacion() {
+        var val = document.getElementById('txtPresentacion').value.trim();
+        if (!val) return;
+        terminoBusqueda = val.toLowerCase();
+        // NO toca el campo de búsqueda ni el botón ✕
+        // Filtrar sin abrir los ítems colapsados
+        var items   = document.querySelectorAll('#registro-list .item');
+        var countEl = document.getElementById('searchCount');
+        var visibles = 0;
+        items.forEach(function(item) {
+          var id = item.id.replace('item-', '');
+          var r  = null;
+          for (var i = 0; i < registros.length; i++) {
+            if (String(registros[i].id) === id) { r = registros[i]; break; }
+          }
+          if (!r) { item.classList.add('hidden'); return; }
+          var haystack = [
+            r.presentacion || '', r.detalles || '', r.fecha || '',
+            r.estadoManual || '',
+            r.cnr ? (r.cnr.matricula    || '') : '',
+            r.cnr ? (r.cnr.acto         || '') : '',
+            r.cnr ? (r.cnr.direccion    || '') : '',
+            r.cnr ? (r.cnr.ubicacion    || '') : '',
+            r.cnr ? (r.cnr.estado       || '') : '',
+            r.cnr ? (r.cnr.presentacion || '') : ''
+          ].join(' ').toLowerCase();
+          if (haystack.indexOf(terminoBusqueda) >= 0) {
+            item.classList.remove('hidden');
+            // NO abre el cuerpo — queda colapsado
+            visibles++;
+          } else {
+            item.classList.add('hidden');
+          }
+        });
+        if (countEl) {
+          countEl.textContent = visibles + ' resultado' + (visibles !== 1 ? 's' : '') + ' encontrado' + (visibles !== 1 ? 's' : '');
+        }
+      }
+
+      function ejecutarBusqueda() {
+        var termino = document.getElementById('searchInput').value;
+        terminoBusqueda = termino.trim().toLowerCase();
+        document.getElementById('searchClear').classList.toggle('visible', terminoBusqueda.length > 0);
+        aplicarFiltro();
+      }
+
       function buscar(termino) {
+        // Mantenida por compatibilidad — ya no se llama en oninput
         terminoBusqueda = termino.trim().toLowerCase();
         document.getElementById('searchClear').classList.toggle('visible', terminoBusqueda.length > 0);
         aplicarFiltro();
@@ -1166,7 +1248,7 @@
         if (countEl) {
           countEl.textContent = terminoBusqueda
             ? (visibles + ' resultado' + (visibles !== 1 ? 's' : '') + ' encontrado' + (visibles !== 1 ? 's' : ''))
-          : '';
+            : '';
         }
       }
 
@@ -1190,8 +1272,8 @@
             var presentacion = (partes[0] || '').trim();
             var detalles     = (partes[1] || '').trim();
 
-            if (!/^\d{12,14}$/.test(presentacion)) {
-              errores.push('El número debe tener entre 12 y 14 dígitos');
+            if (!/^\d{12}$/.test(presentacion)) {
+              errores.push('Línea ' + (i + 1) + ': "' + presentacion + '" no es un número de 12 dígitos');
               continue;
             }
 
@@ -1227,7 +1309,8 @@
           guardarEnStorage();
           renderList();
           var msg = nuevos + ' importado' + (nuevos !== 1 ? 's' : '');
-          if (omitidos > 0) msg += ' · ' + omitidos + ' ya existía' + (omitidos !== 1 ? 'n' : '');
+          if (omitidos > 0) msg += ' · ' + omitidos + ' duplicado' + (omitidos !== 1 ? 's' : '');
+          if (errores.length > 0) msg += ' · ' + errores.length + ' inválido' + (errores.length !== 1 ? 's' : '');
           toast(msg);
 
         }).catch(function(e) { toast('Sin acceso al portapapeles: ' + e.message); });
@@ -1344,7 +1427,7 @@
         el.innerHTML = msg;
         el.classList.add('show');
         clearTimeout(toastTimer);
-        toastTimer = setTimeout(function() { el.classList.remove('show'); }, 2800);
+        toastTimer = setTimeout(function() { el.classList.remove('show'); }, 3000);
       }
 
       function esc(s) {
