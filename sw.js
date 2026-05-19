@@ -3,9 +3,9 @@ self.addEventListener("install", (event) => {
   event.waitUntil(
     caches.open("app-cache").then((cache) => {
       return cache.addAll([
-        "/",          // index.html
-        "icono.jpg", // ícono
-        "manifest.json"
+        "/QR-REGISTRO/",          // index.html dentro de la carpeta
+        "/QR-REGISTRO/icono.jpg", // ícono
+        "/QR-REGISTRO/manifest.json"
       ]);
     })
   );

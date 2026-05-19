@@ -1,7 +1,7 @@
 {
   "name": "QR-REGISTRO",
   "short_name": "QR",
-  "start_url": "/",
+  "start_url": "/QR-REGISTRO/",
   "display": "standalone",
   "icons": [
     {
