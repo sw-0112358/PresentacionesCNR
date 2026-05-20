@@ -3,17 +3,17 @@
   <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    
+
     <title>Registro QR</title>
-   
+
     <link rel="manifest" href="manifest.json">
     <link rel="icon" href="icono.jpg" type="image/jpeg">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-title" content="QR-Registro">
     <link rel="apple-touch-icon" href="icono.jpg">
-    
-    
-    
+
+
+
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
     <style>
       /* ── TEMA OSCURO (default) ── */
@@ -823,7 +823,11 @@
           }
           var datos = parsearTextoCNR(texto);
           for (var i = 0; i < registros.length; i++) {
-            if (registros[i].id === id) { registros[i].cnr = datos; break; }
+            if (registros[i].id === id) {
+              registros[i].cnr = datos;
+              delete registros[i].estadoManual;
+              break;
+            }
           }
           guardarEnStorage();
           renderList();
@@ -1127,7 +1131,7 @@
           var body = document.getElementById('body-' + id);
           if (body) body.classList.add('collapsed');
 
-          if (shown < 100) {
+          if (shown < 50) {
             item.classList.remove('hidden');
             shown++;
           } else {
@@ -1137,7 +1141,7 @@
 
         if (countEl) {
           countEl.textContent = registros.length > 100
-            ? 'Mostrando 100 de ' + registros.length + ' registros'
+            ? 'Mostrando 50 de ' + registros.length + ' registros'
           : '';
         }
         terminoBusqueda = '';
