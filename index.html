@@ -639,7 +639,6 @@
       async function btnconsultarCNRAutomatico(id) {
         await consultarCNRAutomatico(id);
         guardarEnStorage();
-        renderList();
       }
 
 
@@ -691,7 +690,6 @@
         }
 
         guardarEnStorage();
-        renderList();
 
         if (btn) { btn.disabled = false; btn.innerHTML = '🔄📋'; }
 
@@ -701,151 +699,7 @@
            
       }
 
-
-      async function consultarCNRAutomaticotest(id) {
-        var r = null;
-        for (var i = 0; i < registros.length; i++) {
-          if (registros[i].id === id) { r = registros[i]; break; }
-        }
-        if (!r) return;
-
-        var cnrEl = document.getElementById('cnr-block-' + id);
-        if (cnrEl) cnrEl.innerHTML = '<div class="cnr-empty"><span class="paste-spin"></span> Consultando CNR...</div>';
-
-        try {
-          var paginaRes  = await fetch(PROXY_URL + encodeURIComponent(CNR_URL));
-          var paginaHtml = await paginaRes.text();
-
-          var vsMatch = paginaHtml.match(/name="javax\.faces\.ViewState"[^>]*value="([^"]+)"/)
-          || paginaHtml.match(/value="([^"]+)"[^>]*name="javax\.faces\.ViewState"/);
-          if (!vsMatch) {
-            var allInputs = paginaHtml.match(/<input[^>]*ViewState[^>]*>/gi) || [];
-            for (var x = 0; x < allInputs.length; x++) {
-              var vm = allInputs[x].match(/value="([^"]+)"/);
-              if (vm && vm[1].length > 20) { vsMatch = vm; break; }
-            }
-          }
-          if (!vsMatch) throw new Error('No se pudo obtener ViewState');
-
-          var params = new URLSearchParams();
-          params.append('mainForm',                        'mainForm');
-          params.append('mainForm:presentacion',            r.presentacion);
-          params.append('javax.faces.ViewState',            vsMatch[1]);
-          params.append('javax.faces.source',              'mainForm:j_idt15');
-          params.append('javax.faces.partial.event',       'click');
-          params.append('javax.faces.partial.execute',     'mainForm:tramite mainForm:j_idt15');
-          params.append('javax.faces.partial.render',      'mainForm');
-          params.append('javax.faces.behavior.event',      'action');
-          params.append('javax.faces.partial.ajax',        'true');
-          params.append('mainForm:j_idt15',                '');
-
-          var postRes = await fetch(PROXY_API + encodeURIComponent(CNR_URL), {
-            method:  'POST',
-            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-            body:    params.toString()
-          });
-
-          var raw = await postRes.text();
-
-          // ── Extraer innerText igual que antes ──
-          var htmlResultado = '';
-          var updateMatch = raw.match(/<update[^>]*id="mainForm"[^>]*>([\s\S]*?)<\/update>/i);
-          if (updateMatch) {
-            htmlResultado = updateMatch[1].replace(/^<!\[CDATA\[/, '').replace(/\]\]>$/, '');
-          } else {
-            var cdatas = raw.match(/<!\[CDATA\[([\s\S]*?)\]\]>/g) || [];
-            htmlResultado = cdatas.map(function(c) { return c.slice(9, -3); }).join('\n');
-          }
-
-          var div = document.createElement('div');
-          div.style.cssText = 'position:fixed;left:-9999px;top:-9999px;width:800px;visibility:hidden;';
-          div.innerHTML = htmlResultado;
-          document.body.appendChild(div);
-          var textoComoUsuario = div.innerText;
-          document.body.removeChild(div);
-
-          // ── Panel de diagnóstico con las 3 etapas ──
-          var overlay = document.createElement('div');
-          overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.92);z-index:9999;padding:16px;display:flex;flex-direction:column;gap:10px;overflow:hidden;';
-
-          var titulo = document.createElement('div');
-          titulo.style.cssText = 'color:#e2e8f0;font-family:Outfit,sans-serif;font-size:0.9rem;font-weight:600;';
-          titulo.textContent = '🔍 Diagnóstico CNR — ' + r.presentacion;
-          overlay.appendChild(titulo);
-
-          // Tabs
-          var tabs = document.createElement('div');
-          tabs.style.cssText = 'display:flex;gap:8px;flex-shrink:0;';
-
-          var areas = {};
-          var etapas = [
-            { key: 'raw',    label: '1. XML raw',     valor: raw },
-            { key: 'html',   label: '2. HTML extraído', valor: htmlResultado },
-            { key: 'texto',  label: '3. innerText',    valor: textoComoUsuario },
-          ];
-
-          var taContenedor = document.createElement('div');
-          taContenedor.style.cssText = 'flex:1;overflow:hidden;display:flex;';
-
-          etapas.forEach(function(etapa, idx) {
-            var tab = document.createElement('button');
-            tab.textContent = etapa.label;
-            tab.style.cssText = 'padding:5px 12px;border-radius:7px;border:1px solid #2e3f5c;background:' +
-              (idx === 0 ? '#1f2737' : 'transparent') + ';color:#e2e8f0;font-family:Outfit,sans-serif;font-size:0.76rem;cursor:pointer;';
-
-            var ta = document.createElement('textarea');
-            ta.style.cssText = 'flex:1;width:100%;height:100%;background:#0e1117;color:#e2e8f0;font-family:monospace;font-size:0.72rem;padding:10px;border:1px solid #2e3f5c;border-radius:8px;resize:none;display:' + (idx === 0 ? 'block' : 'none') + ';';
-            ta.value = etapa.valor;
-            ta.readOnly = true;
-            areas[etapa.key] = ta;
-            taContenedor.appendChild(ta);
-
-            tab.onclick = function() {
-              etapas.forEach(function(e) { areas[e.key].style.display = 'none'; });
-              tabs.querySelectorAll('button').forEach(function(b) { b.style.background = 'transparent'; });
-              areas[etapa.key].style.display = 'block';
-              tab.style.background = '#1f2737';
-              areas[etapa.key].select();
-            };
-            tabs.appendChild(tab);
-          });
-
-          overlay.appendChild(tabs);
-          overlay.appendChild(taContenedor);
-
-          // Botones de acción
-          var acciones = document.createElement('div');
-          acciones.style.cssText = 'display:flex;gap:8px;flex-shrink:0;';
-
-          var btnCopiar = document.createElement('button');
-          btnCopiar.textContent = '📋 Copiar visible';
-          btnCopiar.style.cssText = 'flex:1;padding:8px;background:#1f2737;color:#e2e8f0;border:1px solid #2e3f5c;border-radius:8px;font-family:Outfit,sans-serif;cursor:pointer;';
-          btnCopiar.onclick = function() {
-            var visible = taContenedor.querySelector('textarea[style*="block"]');
-            if (visible) { visible.select(); navigator.clipboard.writeText(visible.value).then(function() { toast('📋 Copiado'); }); }
-          };
-
-          var btnCerrar = document.createElement('button');
-          btnCerrar.textContent = '✕ Cerrar';
-          btnCerrar.style.cssText = 'padding:8px 20px;background:#ef4444;color:white;border:none;border-radius:8px;font-family:Outfit,sans-serif;cursor:pointer;';
-          btnCerrar.onclick = function() { document.body.removeChild(overlay); };
-
-          acciones.appendChild(btnCopiar);
-          acciones.appendChild(btnCerrar);
-          overlay.appendChild(acciones);
-          document.body.appendChild(overlay);
-
-          // Seleccionar el primer textarea
-          areas['raw'].select();
-
-        } catch (err) {
-          toast('❌ ' + err.message);
-          if (cnrEl) cnrEl.innerHTML = '<div class="cnr-empty">Error diagnóstico: ' + err.message + '</div>';
-          renderList();
-        }
-      }
-
-
+      
       /* ============================================================
          DETECCIÓN DE ESTADO
          ============================================================ */
@@ -893,7 +747,7 @@
           });
           guardarEnStorage();
           renderList();
-          toast('Lista ordenada por estado.');
+          setStatus ('Lista ordenada por estado.');
           if (btn) { setTimeout(function() { btn.classList.remove('sorting'); }, 400); }
         }, 120);
       }
@@ -1068,9 +922,9 @@
               qrTexto = code.data;
               qrTextBadge.textContent = qrTexto;
               qrBadge.classList.add('show');
-              toast('QR detectado.');
+              setStatus ('QR detectado.');
             } else {
-              toast('No se encontro QR en la imagen.');
+              setStatus('No se encontro QR en la imagen.');
             }
           };
           img.src = e.target.result;
@@ -1102,7 +956,7 @@
         if (!presentacion) { toast('Ingresa el N° de Presentación.'); return; }
         for (var i = 0; i < registros.length; i++) {
           if (registros[i].presentacion === presentacion) {
-            toast('⚠️ El N° ' + presentacion + ' ya está en la lista.');
+            setStatus('⚠️ El N° ' + presentacion + ' ya está en la lista.');
             document.getElementById('txtPresentacion').classList.add('input-duplicado');
             return;
           }
@@ -1119,14 +973,13 @@
         guardarEnStorage();
         renderList();
         limpiarFormulario(presentacion);;
-        toast('Registro agregado.');
+        setStatus('Registro agregado.');
       }
 
       function eliminarRegistro(id) {
         registros = registros.filter(function(r) { return r.id !== id; });
         guardarEnStorage();
-        renderList();
-        toast('Registro eliminado.');
+        setStatus('Registro eliminado.');
       }
 
       function abrirCNR(presentacion, qrUrl) {
@@ -1134,7 +987,7 @@
         window.open(url, '_blank', 'noopener,noreferrer');
         if (!qrUrl) {
           navigator.clipboard.writeText(presentacion).catch(function() {});
-          toast('CNR abierto y N° copiado al portapapeles');
+          setStatus('CNR abierto y N° copiado al portapapeles');
         }
       }
 
@@ -1177,8 +1030,7 @@
           }
         }
         guardarEnStorage();
-        renderList();
-        toast('Registro actualizado.');
+        setStatus('✅Registro actualizado.');
       }
 
       function pegarDesdeCNR(id) {
@@ -1188,8 +1040,7 @@
         }
         navigator.clipboard.readText().then(function(texto) {
           if (!texto || texto.trim().length < 20) {
-            toast('El portapapeles esta vacio o sin datos CNR.');
-            renderList();
+            setStatus('⚠️El portapapeles esta vacio o sin datos CNR.');           
             return;
           }
           var datos = parsearTextoCNR(texto);
@@ -1200,12 +1051,10 @@
               break;
             }
           }
-          guardarEnStorage();
-          renderList();
-          toast('Datos pegados correctamente.');
+          guardarEnStorage();         
+          setStatus('✅Datos pegados correctamente.');
         }).catch(function(e) {
-          toast('Sin acceso al portapapeles: ' + e.message);
-          renderList();
+          setStatus('⚠️Sin acceso al portapapeles: ' + e.message);         
         });
       }
 
