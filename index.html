@@ -382,7 +382,9 @@
         <div class="list-header">
           <div style="display:flex;align-items:center;gap:8px;">
             <button class="btn-sort" id="btnOrdenar" onclick="ordenarYRenderizar()" title="Ordenar por bloques de estado">
-              <span class="sort-icon">⇅</span>registros</button>
+              <span class="sort-icon">⇅</span>r</button>
+
+            <button class="btn-sm sheets-btn" onclick="generarImagenesSemana()" title="Generar imágenes de la semana">🗂️</button>           
             <button class="btn-sort" onclick="resetearVista()" title="Resetear vista">🔄</button>       
             <span class="list-count" id="list-count">0</span>
           </div>
@@ -693,13 +695,13 @@
 
         if (btn) { btn.disabled = false; btn.innerHTML = '🔄📋'; }
 
-                           setStatus('✅' + exitosos + ' actualizados');
+        setStatus('✅' + exitosos + ' actualizados');
         if (fallidos > 0)  setStatus('❌' + fallidos + ' fallidos');
         if (omitidos > 0)  setStatus(       omitidos + ' omitidos');
-           
+
       }
 
-      
+
       /* ============================================================
          DETECCIÓN DE ESTADO
          ============================================================ */
@@ -1465,6 +1467,8 @@
       /* ============================================================
          IMPORTAR / EXPORTAR SHEETS
          ============================================================ */
+
+
       function importarDeSheets() {
         navigator.clipboard.readText().then(function(texto) {
           if (!texto || texto.trim().length === 0) { toast('El portapapeles está vacío.'); return; }
@@ -1527,6 +1531,74 @@
         navigator.clipboard.writeText(filas.join('\n')).then(function() {
           toast(registros.length + ' filas copiadas. Pega con Ctrl+V en tu hoja.');
         }).catch(function() { toast('No se pudo copiar al portapapeles.'); });
+      }
+
+
+      /* ============================================================
+         IMPORTAR SEMANA
+         ============================================================ */
+
+
+      function generarImagenesSemana() {
+        // Calcular lunes y domingo de la semana actual
+        var hoy    = new Date();
+        var dia    = hoy.getDay(); // 0=dom, 1=lun ... 6=sab
+        var lunes  = new Date(hoy);
+        lunes.setDate(hoy.getDate() - (dia === 0 ? 6 : dia - 1));
+        lunes.setHours(0, 0, 0, 0);
+        var domingo = new Date(lunes);
+        domingo.setDate(lunes.getDate() + 6);
+        domingo.setHours(23, 59, 59, 999);
+
+        // Meses en español como vienen del CNR
+        var MESES = {
+          'ENE': 0, 'FEB': 1, 'MAR': 2, 'ABR': 3, 'MAY': 4, 'JUN': 5,
+          'JUL': 6, 'AGO': 7, 'SEP': 8, 'OCT': 9, 'NOV': 10, 'DIC': 11
+        };
+
+        function parsearFechaCNR(fechaStr) {
+          if (!fechaStr) return null;
+          // Formato: 20/MAY/2026 15:09:44
+          var m = fechaStr.match(/(\d{1,2})\/([A-Z]{3})\/(\d{4})/i);
+          if (!m) return null;
+          var mes = MESES[m[2].toUpperCase()];
+          if (mes === undefined) return null;
+          return new Date(parseInt(m[3]), mes, parseInt(m[1]));
+        }
+
+        // Filtrar registros con fechaPres en la semana actual
+        var encontrados = [];
+        for (var i = 0; i < registros.length; i++) {
+          var r = registros[i];
+          if (!r.cnr || !r.cnr.fechaPres) continue;
+          var fecha = parsearFechaCNR(r.cnr.fechaPres);
+          if (!fecha) continue;
+          if (fecha >= lunes && fecha <= domingo) {
+            encontrados.push(r);
+          }
+        }
+
+        if (encontrados.length === 0) {
+          var lStr = lunes.toLocaleDateString('es-SV', { day:'2-digit', month:'short' });
+          var dStr = domingo.toLocaleDateString('es-SV', { day:'2-digit', month:'short' });
+          setStatus('⚠️ Sin presentaciones esta semana (' + lStr + ' – ' + dStr + ')');
+          return;
+        }
+
+        // Generar imágenes con delay para no saturar el navegador
+        setStatus('🗂️ Generando ' + encontrados.length + ' imágenes...');
+
+        var idx = 0;
+        function siguiente() {
+          if (idx >= encontrados.length) {
+            setStatus('✅ ' + encontrados.length + ' imágenes generadas');
+            return;
+          }
+          compartirComoImagen(encontrados[idx]);
+          idx++;
+          setTimeout(siguiente, 400);
+        }
+        setTimeout(siguiente, 200);
       }
 
 
@@ -1641,6 +1713,7 @@
       function compartirComoImagen(r) {
         var isDark  = document.documentElement.getAttribute('data-theme') !== 'light';
         var estado  = detectarEstado(r);
+        var escala  = window.devicePixelRatio || 2; // ← factor de resolución
 
         /* ── Colores según tema ── */
         var C = {
@@ -1662,7 +1735,7 @@
         var c   = document.createElement('canvas');
         var cx  = c.getContext('2d');
 
-        /* ── Medir altura necesaria ── */
+        /* ── Medir altura necesaria (sin escala aún) ── */
         cx.font = '500 15px Outfit, sans-serif';
         var detallesLineas = [];
         if (r.detalles) {
@@ -1680,22 +1753,20 @@
 
         var cnrFilas = [];
         if (r.cnr) {
-          if (r.cnr.matricula)   cnrFilas.push(['Matrícula',    r.cnr.matricula]);
-          if (r.cnr.presentacion)cnrFilas.push(['Presentación', r.cnr.presentacion]);
-          if (r.cnr.fechaPres)   cnrFilas.push(['Fecha pres.',  r.cnr.fechaPres]);
-          if (r.cnr.direccion)   cnrFilas.push(['Dirección',    r.cnr.direccion]);
-          if (r.cnr.ubicacion)   cnrFilas.push(['Ubicación',    r.cnr.ubicacion]);
-          if (r.cnr.acto)        cnrFilas.push(['Acto',         r.cnr.acto]);
+          if (r.cnr.matricula)    cnrFilas.push(['Matrícula',    r.cnr.matricula]);
+          if (r.cnr.presentacion) cnrFilas.push(['Presentación', r.cnr.presentacion]);
+          if (r.cnr.fechaPres)    cnrFilas.push(['Fecha pres.',  r.cnr.fechaPres]);
+          if (r.cnr.direccion)    cnrFilas.push(['Dirección',    r.cnr.direccion]);
+          if (r.cnr.ubicacion)    cnrFilas.push(['Ubicación',    r.cnr.ubicacion]);
+          if (r.cnr.acto)         cnrFilas.push(['Acto',         r.cnr.acto]);
         }
 
-        /* ── Calcular altura total ── */
         var ROW_H    = 26;
         var H_BAR    = 60;
-        var H_DET    = r.detalles  ? (14 + detallesLineas.length * 22 + 16) : 0;
-        var H_SLIDER = 0;
+        var H_DET    = r.detalles ? (14 + detallesLineas.length * 22 + 16) : 0;
         var H_CNR    = 0;
         if (r.cnr) {
-          H_CNR = 34 + cnrFilas.length * ROW_H + 18; /* datos generales */
+          H_CNR = 34 + cnrFilas.length * ROW_H + 18;
           if (r.cnr.estado || r.cnr.fechaEstado) {
             H_CNR += 34;
             if (r.cnr.estado)      H_CNR += ROW_H * Math.ceil(r.cnr.estado.length / 42);
@@ -1703,11 +1774,18 @@
           }
           H_CNR += 16;
         }
-        var H_FOOTER = 16;
-        var H_TOTAL  = H_BAR + H_DET + H_SLIDER + H_CNR + H_FOOTER + PAD;
+        var H_TOTAL = H_BAR + H_DET + H_CNR + 16 + PAD;
 
-        c.width  = W;
-        c.height = H_TOTAL;
+        // ── Aplicar escala al canvas ──
+        c.width  = W       * escala;
+        c.height = H_TOTAL * escala;
+        c.style.width  = W       + 'px';
+        c.style.height = H_TOTAL + 'px';
+        cx.scale(escala, escala); // ← todo lo que se dibuje queda multiplicado
+
+
+
+
 
         /* ── Fondo general ── */
         cx.fillStyle = C.bg2;
@@ -1851,7 +1929,7 @@
 
 
         /* ── Exportar ── */
-        /* ── Exportar ── */
+
         try {
           var dataUrl = c.toDataURL('image/png');
           var a = document.createElement('a');
