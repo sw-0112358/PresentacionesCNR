@@ -684,10 +684,30 @@
             fechaSync:    new Date().toLocaleString('es-SV', { dateStyle: 'short', timeStyle: 'short' })
           };
 
+
           for (var i = 0; i < registros.length; i++) {
             if (registros[i].id === id) {
               registros[i].cnr = datos;
-              delete registros[i].estadoManual;
+
+              // Confrontar estado con ESTADOS
+              if (!datos.estado || datos.estado.trim() === '') {
+                registros[i].estadoManual = 'docinicio';
+              } else {
+                var estadoTextoNorm = datos.estado.toLowerCase().replace(/\s+/g, ' ').trim();
+                var hayCoincidencia = false;
+                for (var j = 0; j < ESTADOS.length; j++) {
+                  for (var k = 0; k < ESTADOS[j].palabrasClave.length; k++) {
+                    var claveNorm = ESTADOS[j].palabrasClave[k].toLowerCase().replace(/\s+/g, ' ').trim();
+                    if (estadoTextoNorm.indexOf(claveNorm) >= 0) { hayCoincidencia = true; break; }
+                  }
+                  if (hayCoincidencia) break;
+                }
+                if (hayCoincidencia) {
+                  delete registros[i].estadoManual; // CNR lo resuelve solo
+                } else {
+                  registros[i].estadoManual = 'docinicio';
+                }
+              }
               break;
             }
           }
