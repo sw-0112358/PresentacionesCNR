@@ -329,13 +329,6 @@
       canvas { display: none; }
 
 
-      /* ── Status flotante tema claro ── */
-      [data-theme="light"] #status-flotante {
-        background: var(--surface);
-        border-color: var(--border);
-        box-shadow: 0 8px 32px rgba(0,0,0,0.12);
-      }
-
     </style>
   </head>
   <body>
@@ -484,13 +477,13 @@
 
         { id: 'asesoria',          label: 'Asesoría',       palabrasClave: ['asesoria'],
          barColor: '#60a5fa', badgeGradient: 'linear-gradient(135deg, #f87171, #fca5a5)' },
-        
+
         { id: 'catastro',          label: 'Catastro',       palabrasClave: ['catastro', 'actualización gráfica'],
          barColor: '#a855f7', badgeGradient: 'linear-gradient(135deg, #7c3aed, #a855f7)' },
 
         { id: 'inscritaendespacho',label: 'En despacho',    palabrasClave: ['DOCUMENTO INSCRITO Y LISTO PARA SU ENTREGA', 'Certificación autorizada. Lista para entregarse.'],
          barColor: '#15803d', badgeGradient: 'linear-gradient(135deg, #14532d, #15803d)' },     
-        
+
         { id: 'observada',         label: 'Observada',      palabrasClave: ['Ver notificación en correo electrónico','Solicitud observada'],
          barColor: '#dc2626', badgeGradient: 'linear-gradient(135deg, #dc2626, #ef4444)' },       
 
@@ -518,6 +511,31 @@
       }
       var BLOQUE_SIN_ESTADO = ESTADOS.length - 1;
 
+
+      /* ============================================================
+   STATUS FLOTANTE
+   ============================================================ */
+
+      function setStatus(msg) {
+        const estado = document.createElement("div");
+        estado.textContent = msg;
+        estado.style.cssText = `
+        position:fixed;
+        top:16px;
+        left:50%;
+        transform:translateX(-50%);
+        background:rgba(0,0,0,0.6);
+        color:#fff;
+        padding:6px 12px;
+        border-radius:5px;
+        font-size:12px;
+        z-index:9999;
+        white-space:pre-wrap;
+        word-wrap:break-word;
+        max-width:300px;`;
+        document.body.appendChild(estado);
+        setTimeout(() => estado.remove(), 2000);
+      }
 
 
       /* ============================================================
@@ -613,7 +631,7 @@
             raw    = new TextDecoder('iso-8859-1').decode(buffer);
           }
 
-        //  copiarAlPortapapeles(raw);
+          //  copiarAlPortapapeles(raw);
 
           var htmlResultado = '';
           var updateMatch   = raw.match(/<update[^>]*id="mainForm"[^>]*>([\s\S]*?)<\/update>/i);
@@ -735,10 +753,13 @@
 
         if (btn) { btn.disabled = false; btn.innerHTML = '🔄📋'; }
 
-        setStatus('✅' + exitosos + ' actualizados');
-        if (fallidos > 0)  setStatus('❌' + fallidos + ' fallidos');
-        if (omitidos > 0)  setStatus(       omitidos + ' omitidos');
+        let mensajes = '';
 
+        mensajes += '✅ ' + exitosos + ' actualizados\n';
+        if (fallidos > 0) mensajes += '❌ ' + fallidos + ' fallidos\n';
+        if (omitidos > 0) mensajes += '⚠️ ' + omitidos + ' omitidos\n';
+
+        setStatus(mensajes);
       }
 
 
@@ -2033,140 +2054,6 @@
         ctx.closePath();
       }
 
-
-
-
-
-      /* ============================================================
-   STATUS FLOTANTE
-   ============================================================ */
-      var statusTimer;
-      var statusQueue = [];
-      var statusShowing = false;
-
-      function setStatus(mensaje) {
-        statusQueue.push(mensaje);
-        if (!statusShowing) procesarStatusQueue();
-      }
-
-      function procesarStatusQueue() {
-        if (statusQueue.length === 0) { statusShowing = false; return; }
-        statusShowing = true;
-        var mensaje = statusQueue.shift();
-
-        var el = document.getElementById('status-flotante');
-        if (!el) {
-          el = document.createElement('div');
-          el.id = 'status-flotante';
-          el.style.cssText = [
-            'position:fixed',
-            'top:16px',
-            'left:50%',
-            'transform:translateX(-50%) translateY(-80px)',
-            'background:var(--surface)',
-            'border:1px solid var(--border-lit)',
-            'color:var(--text)',
-            'font-family:Outfit,sans-serif',
-            'font-size:0.82rem',
-            'font-weight:500',
-            'padding:10px 18px 10px 14px',
-            'border-radius:30px',
-            'box-shadow:0 8px 32px rgba(0,0,0,0.35)',
-            'z-index:9990',
-            'display:flex',
-            'align-items:center',
-            'gap:10px',
-            'white-space:nowrap',
-            'max-width:90vw',
-            'overflow:hidden',
-            'text-overflow:ellipsis',
-            'pointer-events:none',
-            'transition:transform 0.3s cubic-bezier(0.34,1.56,0.64,1), opacity 0.3s ease',
-            'opacity:0'
-          ].join(';');
-          document.body.appendChild(el);
-        }
-
-        // Barra de progreso interior
-        var barra = document.getElementById('status-barra');
-        if (!barra) {
-          barra = document.createElement('div');
-          barra.id = 'status-barra';
-          barra.style.cssText = [
-            'position:absolute',
-            'bottom:0',
-            'left:0',
-            'height:2px',
-            'width:100%',
-            'background:var(--accent)',
-            'border-radius:0 0 30px 30px',
-            'transform-origin:left',
-            'transition:none'
-          ].join(';');
-          el.appendChild(barra);
-        }
-
-        el.innerHTML = '';
-        el.appendChild(barra);
-
-        // Ícono según contenido
-        var icono = document.createElement('span');
-        icono.style.cssText = 'font-size:1rem;flex-shrink:0;';
-        if      (mensaje.indexOf('✅') >= 0) icono.textContent = '✅';
-        else if (mensaje.indexOf('❌') >= 0) icono.textContent = '❌';
-        else if (mensaje.indexOf('⚠️') >= 0) icono.textContent = '⚠️';
-        else if (mensaje.indexOf('⏳') >= 0) icono.textContent = '⏳';
-        else if (mensaje.indexOf('⏭️') >= 0) icono.textContent = '⏭️';
-        else                                  icono.textContent = 'ℹ️';
-
-        // Texto limpio (sin el emoji inicial si ya lo pusimos)
-        var textoLimpio = mensaje
-        .replace(/^[✅❌⚠️⏳⏭️ℹ️]\s*/, '')
-        .trim();
-
-        var texto = document.createElement('span');
-        texto.textContent = textoLimpio || mensaje;
-        texto.style.cssText = 'flex:1;overflow:hidden;text-overflow:ellipsis;';
-
-        // Contador de cola
-        if (statusQueue.length > 0) {
-          var cola = document.createElement('span');
-          cola.style.cssText = [
-            'font-size:0.68rem',
-            'background:var(--border)',
-            'color:var(--text-muted)',
-            'padding:1px 7px',
-            'border-radius:20px',
-            'flex-shrink:0'
-          ].join(';');
-          cola.textContent = '+' + statusQueue.length;
-          el.insertBefore(cola, barra);
-        }
-
-        el.insertBefore(icono, barra);
-        el.insertBefore(texto, barra);
-
-        // Mostrar con animación
-        requestAnimationFrame(function() {
-          el.style.opacity    = '1';
-          el.style.transform  = 'translateX(-50%) translateY(0)';
-          barra.style.transition = 'none';
-          barra.style.transform  = 'scaleX(1)';
-
-          // Iniciar reducción de barra
-          requestAnimationFrame(function() {
-            barra.style.transition = 'transform 2.8s linear';
-            barra.style.transform  = 'scaleX(0)';
-          });
-        });
-
-        clearTimeout(statusTimer);
-        statusTimer = setTimeout(function() {
-          el.style.opacity   = '0';
-          el.style.transform = 'translateX(-50%) translateY(-80px)';
-          setTimeout(procesarStatusQueue, 320);
-        }, 3000);
-      }
 
     </script>
 
