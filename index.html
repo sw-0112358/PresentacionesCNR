@@ -1796,18 +1796,15 @@
 
 
 
-
-
-
       /* ============================================================
-         COMPARTIR COMO IMAGEN — dibuja tarjeta en canvas
-         ============================================================ */
-      function compartirComoImagen(r) {
-        var isDark  = document.documentElement.getAttribute('data-theme') !== 'light';
-        var estado  = detectarEstado(r);
-        var escala  = window.devicePixelRatio || 2; // ← factor de resolución
+   COMPARTIR COMO IMAGEN — dibuja tarjeta en canvas
+   ============================================================ */
 
-        /* ── Colores según tema ── */
+      function compartirComoImagen(r) {
+        var isDark = document.documentElement.getAttribute('data-theme') !== 'light';
+        var estado = detectarEstado(r);
+        var escala = window.devicePixelRatio || 2;
+
         var C = {
           bg:       isDark ? '#0e1117' : '#ffffff',
           bg2:      isDark ? '#141824' : '#f8fafc',
@@ -1824,25 +1821,73 @@
 
         var W   = 700;
         var PAD = 28;
+        var ROW_H = 26;
         var c   = document.createElement('canvas');
         var cx  = c.getContext('2d');
 
-        /* ── Medir altura necesaria (sin escala aún) ── */
-        cx.font = '500 15px Outfit, sans-serif';
-        var detallesLineas = [];
-        if (r.detalles) {
-          var palabras = r.detalles.split(' ');
-          var linea = '';
-          for (var w = 0; w < palabras.length; w++) {
-            var prueba = linea + (linea ? ' ' : '') + palabras[w];
-            if (cx.measureText(prueba).width > W - PAD * 2 - 24) {
-              if (linea) detallesLineas.push(linea);
-              linea = palabras[w];
-            } else { linea = prueba; }
-          }
-          if (linea) detallesLineas.push(linea);
+        /* ── Helpers de canvas ── */
+        function roundRect(ctx, x, y, w, h, r2) {
+          ctx.beginPath();
+          ctx.moveTo(x + r2, y);
+          ctx.lineTo(x + w - r2, y);
+          ctx.quadraticCurveTo(x + w, y, x + w, y + r2);
+          ctx.lineTo(x + w, y + h - r2);
+          ctx.quadraticCurveTo(x + w, y + h, x + w - r2, y + h);
+          ctx.lineTo(x + r2, y + h);
+          ctx.quadraticCurveTo(x, y + h, x, y + h - r2);
+          ctx.lineTo(x, y + r2);
+          ctx.quadraticCurveTo(x, y, x + r2, y);
+          ctx.closePath();
+        }
+        function roundRectTop(ctx, x, y, w, h, r2) {
+          ctx.beginPath();
+          ctx.moveTo(x + r2, y);
+          ctx.lineTo(x + w - r2, y);
+          ctx.quadraticCurveTo(x + w, y, x + w, y + r2);
+          ctx.lineTo(x + w, y + h);
+          ctx.lineTo(x, y + h);
+          ctx.lineTo(x, y + r2);
+          ctx.quadraticCurveTo(x, y, x + r2, y);
+          ctx.closePath();
+        }
+        function roundRectLeft(ctx, x, y, w, h, r2) {
+          ctx.beginPath();
+          ctx.moveTo(x + r2, y);
+          ctx.lineTo(x + w, y);
+          ctx.lineTo(x + w, y + h);
+          ctx.lineTo(x + r2, y + h);
+          ctx.quadraticCurveTo(x, y + h, x, y + h - r2);
+          ctx.lineTo(x, y + r2);
+          ctx.quadraticCurveTo(x, y, x + r2, y);
+          ctx.closePath();
         }
 
+        /* ── Helper wrap de texto — devuelve array de líneas ── */
+        function wrapTexto(texto, maxWidth, font) {
+          cx.font = font;
+          var palabras = texto.split(' ');
+          var lineas = [];
+          var linea = '';
+          for (var i = 0; i < palabras.length; i++) {
+            var prueba = linea + (linea ? ' ' : '') + palabras[i];
+            if (cx.measureText(prueba).width > maxWidth) {
+              if (linea) lineas.push(linea);
+              linea = palabras[i];
+            } else {
+              linea = prueba;
+            }
+          }
+          if (linea) lineas.push(linea);
+          return lineas;
+        }
+
+        /* ── Pre-calcular detalles ── */
+        var detallesLineas = [];
+        if (r.detalles) {
+          detallesLineas = wrapTexto(r.detalles, W - PAD * 2 - 24, '500 15px Outfit, sans-serif');
+        }
+
+        /* ── Pre-calcular filas CNR datos generales ── */
         var cnrFilas = [];
         if (r.cnr) {
           if (r.cnr.matricula)    cnrFilas.push(['Matrícula',    r.cnr.matricula]);
@@ -1851,33 +1896,51 @@
           if (r.cnr.direccion)    cnrFilas.push(['Dirección',    r.cnr.direccion]);
           if (r.cnr.ubicacion)    cnrFilas.push(['Ubicación',    r.cnr.ubicacion]);
           if (r.cnr.acto)         cnrFilas.push(['Acto',         r.cnr.acto]);
+          if (r.cnr.solicitante)  cnrFilas.push(['Solicitante',  r.cnr.solicitante]);
         }
 
-        var ROW_H    = 26;
-        var H_BAR    = 60;
-        var H_DET    = r.detalles ? (14 + detallesLineas.length * 22 + 16) : 0;
-        var H_CNR    = 0;
+        /* ── Pre-calcular filas CNR estado jurídico ── */
+        var estadoFilas = [];
         if (r.cnr) {
-          H_CNR = 34 + cnrFilas.length * ROW_H + 18;
-          if (r.cnr.estado || r.cnr.fechaEstado) {
-            H_CNR += 34;
-            if (r.cnr.estado)      H_CNR += ROW_H * Math.ceil(r.cnr.estado.length / 42);
-            if (r.cnr.fechaEstado) H_CNR += ROW_H;
-          }
-          H_CNR += 16;
+          if (r.cnr.estado)      estadoFilas.push(['Estado',         r.cnr.estado,      C.green]);
+          if (r.cnr.fechaEstado) estadoFilas.push(['Fecha estado',   r.cnr.fechaEstado, null]);
+          if (r.cnr.observacion) estadoFilas.push(['Observación',    r.cnr.observacion, null]);
+          if (r.cnr.fechaSync)   estadoFilas.push(['🌐Actualizado',  r.cnr.fechaSync,   null]);
         }
+
+        /* ── Calcular alturas ── */
+        var valMax = (W - PAD * 2) - 110 - 14;
+
+        function alturaFila(valor, bold) {
+          var font = bold ? 'bold 12px Outfit, sans-serif' : '400 12px Outfit, sans-serif';
+          var lineas = wrapTexto(valor, valMax, font);
+          return ROW_H + (lineas.length > 1 ? (lineas.length - 1) * 16 : 0);
+        }
+
+        var H_BAR = 60;
+        var H_DET = r.detalles ? (14 + detallesLineas.length * 22 + 16) : 0;
+        var H_CNR = 0;
+
+        if (r.cnr) {
+          H_CNR += 34; // título datos generales
+          for (var i = 0; i < cnrFilas.length; i++) {
+            H_CNR += alturaFila(cnrFilas[i][1], false);
+          }
+          if (estadoFilas.length > 0) {
+            H_CNR += 34; // título estado jurídico
+            for (var i = 0; i < estadoFilas.length; i++) {
+              H_CNR += alturaFila(estadoFilas[i][1], estadoFilas[i][2] !== null);
+            }
+          }
+          H_CNR += 18; // padding inferior
+        }
+
         var H_TOTAL = H_BAR + H_DET + H_CNR + 16 + PAD;
 
-        // ── Aplicar escala al canvas ──
-        c.width  = W       * escala;
+        /* ── Configurar canvas ── */
+        c.width  = W * escala;
         c.height = H_TOTAL * escala;
-        c.style.width  = W       + 'px';
-        c.style.height = H_TOTAL + 'px';
-        cx.scale(escala, escala); // ← todo lo que se dibuje queda multiplicado
-
-
-
-
+        cx.scale(escala, escala);
 
         /* ── Fondo general ── */
         cx.fillStyle = C.bg2;
@@ -1899,12 +1962,11 @@
           cx.fill();
         }
 
-        /* Badge número presentación — centrado */
-        var numText  = r.presentacion;
-        cx.font      = 'bold 16px JetBrains Mono, monospace';
-        var numW     = cx.measureText(numText).width + 32;
-        var numX     = (W - numW) / 2;
-        var numY     = H_BAR / 2;
+        /* Badge número de presentación — centrado */
+        cx.font = 'bold 16px JetBrains Mono, monospace';
+        var numW = cx.measureText(r.presentacion).width + 32;
+        var numX = (W - numW) / 2;
+        var numY = H_BAR / 2;
         cx.strokeStyle = C.barColor !== 'transparent' ? C.barColor : C.border;
         cx.lineWidth   = 1.5;
         roundRect(cx, numX, numY - 17, numW, 34, 9);
@@ -1912,15 +1974,15 @@
         cx.fillStyle    = C.text;
         cx.textAlign    = 'center';
         cx.textBaseline = 'middle';
-        cx.fillText(numText, W / 2, numY);
+        cx.fillText(r.presentacion, W / 2, numY);
 
         var yPos = H_BAR + 16;
 
         /* ── Detalles ── */
         if (r.detalles) {
-          cx.font      = '500 15px Outfit, sans-serif';
-          cx.fillStyle = C.dim;
-          cx.textAlign = 'left';
+          cx.font         = '500 15px Outfit, sans-serif';
+          cx.fillStyle    = C.dim;
+          cx.textAlign    = 'left';
           cx.textBaseline = 'top';
           for (var dl = 0; dl < detallesLineas.length; dl++) {
             cx.fillText(detallesLineas[dl], PAD + 12, yPos + dl * 22);
@@ -1928,100 +1990,70 @@
           yPos += detallesLineas.length * 22 + 16;
         }
 
-
         /* ── Bloque CNR ── */
         if (r.cnr) {
-          cx.fillStyle  = C.bg3;
-          cx.strokeStyle = C.border;
-          cx.lineWidth  = 1;
-          roundRect(cx, PAD, yPos, W - PAD * 2, H_CNR, 10);
-          cx.fill(); cx.stroke();
-
           var bx = PAD;
           var bw = W - PAD * 2;
 
+          /* Fondo del bloque */
+          cx.fillStyle   = C.bg3;
+          cx.strokeStyle = C.border;
+          cx.lineWidth   = 1;
+          roundRect(cx, bx, yPos, bw, H_CNR, 10);
+          cx.fill(); cx.stroke();
+
           /* Título Datos generales */
-          cx.font      = 'bold 10px Outfit, sans-serif';
-          cx.fillStyle = C.accent;
-          cx.textAlign = 'left';
+          cx.font         = 'bold 10px Outfit, sans-serif';
+          cx.fillStyle    = C.accent;
+          cx.textAlign    = 'left';
           cx.textBaseline = 'top';
           cx.fillText('DATOS GENERALES', bx + 14, yPos + 11);
           cx.strokeStyle = C.border; cx.lineWidth = 1;
           cx.beginPath(); cx.moveTo(bx, yPos + 30); cx.lineTo(bx + bw, yPos + 30); cx.stroke();
 
           var fy = yPos + 36;
-          for (var fi = 0; fi < cnrFilas.length; fi++) {
+
+          /* Dibujar fila — trabaja con fy por índice en array externo */
+          function dibujarFilaEn(etiqueta, valor, colorValor, fyRef) {
             cx.font      = '400 12px Outfit, sans-serif';
             cx.fillStyle = C.muted;
-            cx.textAlign = 'left';
-            cx.fillText(cnrFilas[fi][0], bx + 14, fy);
-            cx.fillStyle = C.dim;
-            /* Wrap valor largo */
-            var valMax  = bw - 110;
-            var valText = cnrFilas[fi][1];
-            cx.font     = '400 12px Outfit, sans-serif';
-            if (cx.measureText(valText).width > valMax) {
-              var partes = valText.split(' ');
-              var vl = ''; var vlines = [];
-              for (var vp = 0; vp < partes.length; vp++) {
-                var vt = vl + (vl ? ' ' : '') + partes[vp];
-                if (cx.measureText(vt).width > valMax) { if (vl) vlines.push(vl); vl = partes[vp]; }
-                else { vl = vt; }
-              }
-              if (vl) vlines.push(vl);
-              for (var vli = 0; vli < vlines.length; vli++) {
-                cx.fillText(vlines[vli], bx + 110, fy + vli * 16);
-              }
-              fy += (vlines.length - 1) * 16;
-            } else {
-              cx.fillText(valText, bx + 110, fy);
+            cx.textAlign    = 'left';
+            cx.textBaseline = 'top';
+            cx.fillText(etiqueta, bx + 14, fyRef[0]);
+
+            var font = colorValor ? 'bold 12px Outfit, sans-serif' : '400 12px Outfit, sans-serif';
+            var lineas = wrapTexto(valor, valMax, font);
+            cx.font      = font;
+            cx.fillStyle = colorValor || C.dim;
+            for (var li = 0; li < lineas.length; li++) {
+              cx.fillText(lineas[li], bx + 110, fyRef[0] + li * 16);
             }
-            fy += ROW_H;
+            fyRef[0] += ROW_H + (lineas.length > 1 ? (lineas.length - 1) * 16 : 0);
           }
 
-          /* Título Estado jurídico */
-          if (r.cnr.estado || r.cnr.fechaEstado) {
+          /* Filas datos generales */
+          var fyRef = [fy];
+          for (var fi = 0; fi < cnrFilas.length; fi++) {
+            dibujarFilaEn(cnrFilas[fi][0], cnrFilas[fi][1], null, fyRef);
+          }
+
+          /* Sección Estado jurídico */
+          if (estadoFilas.length > 0) {
             cx.strokeStyle = C.border; cx.lineWidth = 1;
-            cx.beginPath(); cx.moveTo(bx, fy); cx.lineTo(bx + bw, fy); cx.stroke();
-            cx.font      = 'bold 10px Outfit, sans-serif';
-            cx.fillStyle = C.accent;
-            cx.fillText('ESTADO JURÍDICO', bx + 14, fy + 9);
-            fy += 30;
-            if (r.cnr.estado) {
-              cx.font      = '400 12px Outfit, sans-serif';
-              cx.fillStyle = C.muted;
-              cx.fillText('Estado', bx + 14, fy);
-              cx.font      = 'bold 12px Outfit, sans-serif';
-              cx.fillStyle = C.green;
-              var eText = r.cnr.estado;
-              var eLines = [];
-              var eMax   = bw - 110;
-              var eParts = eText.split(' ');
-              var el2    = '';
-              for (var ep = 0; ep < eParts.length; ep++) {
-                var et = el2 + (el2 ? ' ' : '') + eParts[ep];
-                if (cx.measureText(et).width > eMax) { if (el2) eLines.push(el2); el2 = eParts[ep]; }
-                else { el2 = et; }
-              }
-              if (el2) eLines.push(el2);
-              for (var eli = 0; eli < eLines.length; eli++) {
-                cx.fillText(eLines[eli], bx + 110, fy + eli * 16);
-              }
-              fy += Math.max(eLines.length, 1) * ROW_H;
-            }
-            if (r.cnr.fechaEstado) {
-              cx.font = '400 12px Outfit, sans-serif'; cx.fillStyle = C.muted;
-              cx.fillText('Fecha estado', bx + 14, fy);
-              cx.fillStyle = C.dim; cx.fillText(r.cnr.fechaEstado, bx + 110, fy);
-              fy += ROW_H;
+            cx.beginPath(); cx.moveTo(bx, fyRef[0]); cx.lineTo(bx + bw, fyRef[0]); cx.stroke();
+            cx.font         = 'bold 10px Outfit, sans-serif';
+            cx.fillStyle    = C.accent;
+            cx.textBaseline = 'top';
+            cx.fillText('ESTADO JURÍDICO', bx + 14, fyRef[0] + 9);
+            fyRef[0] += 30;
+
+            for (var ei = 0; ei < estadoFilas.length; ei++) {
+              dibujarFilaEn(estadoFilas[ei][0], estadoFilas[ei][1], estadoFilas[ei][2], fyRef);
             }
           }
-          yPos += H_CNR + 10;
         }
 
-
         /* ── Exportar ── */
-
         try {
           var dataUrl = c.toDataURL('image/png');
           var a = document.createElement('a');
@@ -2034,45 +2066,9 @@
         } catch(e) {
           toast('Error al generar imagen: ' + e.message);
         }
-
       }
 
-      /* ── Helpers de canvas ── */
-      function roundRect(ctx, x, y, w, h, r) {
-        ctx.beginPath();
-        ctx.moveTo(x + r, y);
-        ctx.lineTo(x + w - r, y);
-        ctx.quadraticCurveTo(x + w, y, x + w, y + r);
-        ctx.lineTo(x + w, y + h - r);
-        ctx.quadraticCurveTo(x + w, y + h, x + w - r, y + h);
-        ctx.lineTo(x + r, y + h);
-        ctx.quadraticCurveTo(x, y + h, x, y + h - r);
-        ctx.lineTo(x, y + r);
-        ctx.quadraticCurveTo(x, y, x + r, y);
-        ctx.closePath();
-      }
-      function roundRectTop(ctx, x, y, w, h, r) {
-        ctx.beginPath();
-        ctx.moveTo(x + r, y);
-        ctx.lineTo(x + w - r, y);
-        ctx.quadraticCurveTo(x + w, y, x + w, y + r);
-        ctx.lineTo(x + w, y + h);
-        ctx.lineTo(x, y + h);
-        ctx.lineTo(x, y + r);
-        ctx.quadraticCurveTo(x, y, x + r, y);
-        ctx.closePath();
-      }
-      function roundRectLeft(ctx, x, y, w, h, r) {
-        ctx.beginPath();
-        ctx.moveTo(x + r, y);
-        ctx.lineTo(x + w, y);
-        ctx.lineTo(x + w, y + h);
-        ctx.lineTo(x + r, y + h);
-        ctx.quadraticCurveTo(x, y + h, x, y + h - r);
-        ctx.lineTo(x, y + r);
-        ctx.quadraticCurveTo(x, y, x + r, y);
-        ctx.closePath();
-      }
+
 
 
     </script>
