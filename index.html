@@ -491,7 +491,7 @@
         { id: 'documentoCancelado',label: 'Rechazado',      palabrasClave: ['DOCUMENTO CANCELADO DE PLENO DERECHO Y LISTO PARA SU ENTREGA'],
          barColor: '#111827', badgeGradient: 'linear-gradient(135deg, #16a34a, #dc2626)'},       
 
-        { id: 'inscritaretirada',  label: 'Retirada',       palabrasClave: ['DOCUMENTO INSCRITO FUE RETIRADO POR','Certificación retirada por el usuario'],
+        { id: 'inscritaretirada',  label: 'Retirada',       palabrasClave: ['DOCUMENTO INSCRITO FUE RETIRADO POR','Certificación retirada por el usuario','DOCUMENTO RETIRADO SIN INSCRIBIR . ENTREGADO A'],
          barColor: '#94a3b8', badgeGradient: 'linear-gradient(135deg, #64748b, #94a3b8)'},           
 
         { id: 'sincategoria',      label: 'Sin categoría',  palabrasClave: [],
@@ -753,11 +753,13 @@
           // Buscar el registro y verificar su estado
           for (var i = 0; i < registros.length; i++) {
             if (registros[i].id === id) {
+             
               var estado = detectarEstado(registros[i]);
               var estadoId = estado ? estado.id : 'sincategoria';
-              if (OMITIR_ESTADOSCNR.indexOf(estadoId) === -1) {
-                ids.push(id); // Solo agregar si no está en la lista de omitidos
+              if (terminoBusqueda || OMITIR_ESTADOSCNR.indexOf(estadoId) === -1) {
+                ids.push(id); // Si hay búsqueda activa, ignorar omisión por estado
               }
+                   
               break;
             }
           }
