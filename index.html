@@ -332,6 +332,7 @@
     </style>
   </head>
   <body>
+    <div id="pantalla1" style="display:block;">
     <div class="page">
 
       <div class="header">
@@ -406,7 +407,9 @@
       </div>
 
     </div>
+    </div><!-- fin pantalla1 -->
 
+    <div id="pantalla2" style="display:none;">
     <!-- ── Modal de confirmación para Limpiar todo ── -->
     <div id="confirm-overlay">
       <div id="confirm-box">
@@ -424,14 +427,62 @@
       </div>
     </div>
 
+    <button onclick="alternarPantalla()" id="btn-pantalla"
+      style="position:fixed;bottom:68px;right:12px;z-index:999;
+             background:var(--accent);color:#fff;border:none;
+             border-radius:50%;width:42px;height:42px;font-size:1.1rem;
+             cursor:pointer;box-shadow:0 4px 14px rgba(37,99,235,0.4);">🔁</button>
+
+    </div><!-- fin pantalla2 -->
+
     <div id="storage-bar">
       <!-- ✨ Botón Limpiar todo — antes del indicador de peso -->
       <button class="storage-btn-clear" onclick="abrirConfirm()" title="Limpiar todos los registros">✨</button>
       <div class="bar-sep"></div>
+    
       <span id="storage-size">&#128190; --</span>
+      
       <div class="bar-sep"></div>
-      <button class="storage-btn" onclick="exportarBackup()">⬇Backup</button>
-      <button class="storage-btn" onclick="document.getElementById('importBackupFile').click()">⬆Cargar</button>
+      <span id="cloud-size" onclick="actualizarPesoCloud()" title="Ver peso en nube"
+            style="font-family:'JetBrains Mono',monospace;font-size:0.65rem;
+                   color:var(--text-muted);cursor:pointer;white-space:nowrap;">☁️ --</span>     
+      
+      <div class="bar-sep"></div>
+      <div style="position:relative;display:inline-block;">
+        <button class="storage-btn" onclick="toggleMenuBackup()">⬇Backup</button>
+        <div id="menu-backup" style="display:none;position:absolute;bottom:32px;left:0;
+             background:var(--surface);border:1px solid var(--border-lit);border-radius:8px;
+             padding:4px;min-width:120px;box-shadow:0 4px 16px rgba(0,0,0,.2);z-index:1000;">
+          <button onclick="exportarBackup();cerrarMenus()" 
+            style="display:block;width:100%;text-align:left;padding:6px 10px;
+                   background:none;border:none;color:var(--text);font-size:.78rem;
+                   cursor:pointer;border-radius:5px;font-family:'JetBrains Mono',monospace;">
+            💾 Local</button>
+          <button onclick="cloudGuardar();cerrarMenus()"
+            style="display:block;width:100%;text-align:left;padding:6px 10px;
+                   background:none;border:none;color:var(--text);font-size:.78rem;
+                   cursor:pointer;border-radius:5px;font-family:'JetBrains Mono',monospace;">
+            ☁️ Cloud</button>
+        </div>
+      </div>
+
+      <div style="position:relative;display:inline-block;">
+        <button class="storage-btn" onclick="toggleMenuCargar()">⬆⬆</button>
+        <div id="menu-cargar" style="display:none;position:absolute;bottom:32px;left:0;
+             background:var(--surface);border:1px solid var(--border-lit);border-radius:8px;
+             padding:4px;min-width:120px;box-shadow:0 4px 16px rgba(0,0,0,.2);z-index:1000;">
+          <button onclick="document.getElementById('importBackupFile').click();cerrarMenus()"
+            style="display:block;width:100%;text-align:left;padding:6px 10px;
+                   background:none;border:none;color:var(--text);font-size:.78rem;
+                   cursor:pointer;border-radius:5px;font-family:'JetBrains Mono',monospace;">
+            💾 Local</button>
+          <button onclick="cloudCargar();cerrarMenus()"
+            style="display:block;width:100%;text-align:left;padding:6px 10px;
+                   background:none;border:none;color:var(--text);font-size:.78rem;
+                   cursor:pointer;border-radius:5px;font-family:'JetBrains Mono',monospace;">
+            ☁️ Cloud</button>
+        </div>
+      </div>
       <input type="file" id="importBackupFile" accept=".json" style="display:none" onchange="importarBackup(this)">
       <div class="bar-sep"></div>
       <button id="theme-toggle" onclick="toggleTema()" title="Cambiar tema">&#127769;</button>
@@ -446,6 +497,15 @@
          VARIABLES GLOBALES
          ============================================================ */
       var STORAGE_KEY     = 'qr_registros_v1';
+      var CLOUD_KEY       = 'qr-registro-v1';
+      var _pantallaActual = 1;
+
+      function alternarPantalla() {
+        _pantallaActual = _pantallaActual === 1 ? 2 : 1;
+        document.getElementById('pantalla1').style.display = _pantallaActual === 1 ? 'block' : 'none';
+        document.getElementById('pantalla2').style.display = _pantallaActual === 2 ? 'block' : 'none';
+        document.getElementById('btn-pantalla').textContent = _pantallaActual === 1 ? '📋' : '➕';
+      }
       var THEME_KEY       = 'qr_tema_v1';
       var CNR_CONSULTA    = 'https://www.e.cnr.gob.sv/ConsultaTramite3/consulta/consultaTramite.htm';
       var registros       = [];
@@ -998,6 +1058,14 @@
       /* ============================================================
          INIT
          ============================================================ */
+     document.addEventListener('click', function(e) {
+        if (!e.target.closest('#menu-backup') && !e.target.closest('#menu-cargar')
+            && !e.target.closest('[onclick="toggleMenuBackup()"]')
+            && !e.target.closest('[onclick="toggleMenuCargar()"]')) {
+          cerrarMenus();
+        }
+      });
+      
       window.addEventListener('DOMContentLoaded', function() {
         cargarTema();
         cargarDesdeStorage();
@@ -1802,6 +1870,79 @@
         reader.readAsText(file);
       }
 
+      
+      
+      function toggleMenuBackup() {
+        const m = document.getElementById('menu-backup');
+        const c = document.getElementById('menu-cargar');
+        c.style.display = 'none';
+        m.style.display = m.style.display === 'none' ? 'block' : 'none';
+      }
+      function toggleMenuCargar() {
+        const m = document.getElementById('menu-cargar');
+        const b = document.getElementById('menu-backup');
+        b.style.display = 'none';
+        m.style.display = m.style.display === 'none' ? 'block' : 'none';
+      }
+      function cerrarMenus() {
+        document.getElementById('menu-backup').style.display = 'none';
+        document.getElementById('menu-cargar').style.display = 'none';
+      }
+
+      
+      async function actualizarPesoCloud() {
+        const el = document.getElementById('cloud-size');
+        if (el) el.textContent = '☁️ …';
+        try {
+          const resp = await fetch(CF_WORKER + '/kv-load?id=' + CLOUD_KEY);
+          if (!resp.ok) throw new Error('HTTP ' + resp.status);
+          const datos = await resp.json();
+          const bytes = JSON.stringify(datos).length * 2;
+          const kb    = (bytes / 1024).toFixed(1);
+          if (el) el.textContent = '☁️ ' + kb + ' KB';
+        } catch(e) {
+          if (el) el.textContent = '☁️ ✗';
+          toast('❌ ' + e.message);
+        }
+      }
+      
+      async function cloudGuardar() {
+        try {
+          const resp = await fetch(CF_WORKER + '/kv-save', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ id: CLOUD_KEY, data: registros })
+          });
+          if (!resp.ok) throw new Error('HTTP ' + resp.status);
+          const bytes = JSON.stringify(registros).length * 2;
+          const kb    = (bytes / 1024).toFixed(1);
+          const cloudEl = document.getElementById('cloud-size');
+          if (cloudEl) cloudEl.textContent = '☁️ ' + kb + ' KB';
+          toast('☁️ Guardado en nube · ' + registros.length + ' registros · ' + kb + ' KB');
+        } catch(e) { toast('❌ Error al guardar en nube: ' + e.message); }
+      }
+
+      async function cloudCargar() {
+        try {
+          const resp = await fetch(CF_WORKER + '/kv-load?id=' + CLOUD_KEY);
+          if (!resp.ok) throw new Error('HTTP ' + resp.status);
+          const datos = await resp.json();
+          if (!Array.isArray(datos) || !datos.length) { toast('⚠️ Nube vacía o sin datos.'); return; }
+          var nuevos = 0;
+          for (var i = 0; i < datos.length; i++) {
+            var existe = false;
+            for (var j = 0; j < registros.length; j++) {
+              if (registros[j].id === datos[i].id) { existe = true; break; }
+            }
+            if (!existe) { registros.push(datos[i]); nuevos++; }
+          }
+          guardarEnStorage();
+          renderList();
+          actualizarStorageBar();
+          toast('☁️ ' + nuevos + ' registros cargados desde la nube.');
+        } catch(e) { toast('❌ Error al cargar desde nube: ' + e.message); }
+      }
+      
       function guardarEnStorage() {
         localStorage.setItem(STORAGE_KEY, JSON.stringify(registros));
         actualizarStorageBar();
