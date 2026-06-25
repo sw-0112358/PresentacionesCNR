@@ -579,25 +579,25 @@
    STATUS FLOTANTE
    ============================================================ */
 
+      var _statusEl = null;
+      var _statusTimer = null;
       function setStatus(msg) {
-        const estado = document.createElement("div");
-        estado.textContent = msg;
-        estado.style.cssText = `
-        position:fixed;
-        top:16px;
-        left:50%;
-        transform:translateX(-50%);
-        background:rgba(0,0,0,0.6);
-        color:#fff;
-        padding:6px 12px;
-        border-radius:5px;
-        font-size:12px;
-        z-index:9999;
-        white-space:pre-wrap;
-        word-wrap:break-word;
-        max-width:300px;`;
-        document.body.appendChild(estado);
-        setTimeout(() => estado.remove(), 2000);
+        if (!_statusEl) {
+          _statusEl = document.createElement("div");
+          _statusEl.style.cssText =
+          'position:fixed;top:16px;left:50%;transform:translateX(-50%);' +
+          'background:rgba(0,0,0,0.6);color:#fff;padding:6px 12px;' +
+          'border-radius:5px;font-size:12px;z-index:9999;' +
+          'white-space:pre-wrap;word-wrap:break-word;max-width:300px;' +
+          'transition:opacity 0.2s;';
+          document.body.appendChild(_statusEl);
+        }
+        _statusEl.textContent = msg;
+        _statusEl.style.opacity = '1';
+        if (_statusTimer) clearTimeout(_statusTimer);
+        _statusTimer = setTimeout(function() {
+          if (_statusEl) _statusEl.style.opacity = '0';
+        }, 2500);
       }
 
 
@@ -1183,6 +1183,10 @@
       function eliminarRegistro(id) {
         registros = registros.filter(function(r) { return r.id !== id; });
         guardarEnStorage();
+        var itemEl = document.getElementById('item-' + id);
+        if (itemEl && itemEl.parentNode) itemEl.parentNode.remove();
+        var countEl = document.getElementById('list-count');
+        if (countEl) countEl.textContent = registros.length;
         setStatus('Registro eliminado.');
       }
 
@@ -1255,10 +1259,23 @@
               break;
             }
           }
-          guardarEnStorage();         
+          guardarEnStorage();
+          var rActual = null;
+          for (var i = 0; i < registros.length; i++) {
+            if (registros[i].id === id) { rActual = registros[i]; break; }
+          }
+          if (rActual) {
+            var cnrElFinal = document.getElementById('cnr-block-' + id);
+            if (cnrElFinal) {
+              var nuevoBloque = renderCNRBlock(rActual);
+              cnrElFinal.parentNode.replaceChild(nuevoBloque, cnrElFinal);
+            }
+            aplicarColorTarjeta(id, detectarEstado(rActual));
+            actualizarSlider(id, rActual);
+          }
           setStatus('✅Datos pegados correctamente.');
         }).catch(function(e) {
-          setStatus('⚠️Sin acceso al portapapeles: ' + e.message);         
+          setStatus('⚠️Sin acceso al portapapeles: ' + e.message);
         });
       }
 
