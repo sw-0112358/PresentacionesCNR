@@ -410,7 +410,16 @@
     </div><!-- fin pantalla1 -->
 
     <div id="pantalla2" style="display:none;">
-      <!-- ── Modal de confirmación para Limpiar todo ── -->
+
+      <button onclick="alternarPantalla()" id="btn-pantalla"
+              style="position:fixed;bottom:68px;right:12px;z-index:999;
+                     background:var(--accent);color:#fff;border:none;
+                     border-radius:50%;width:42px;height:42px;font-size:1.1rem;
+                     cursor:pointer;box-shadow:0 4px 14px rgba(37,99,235,0.4);">🔁</button>
+
+    </div><!-- fin pantalla2 -->
+
+    <!-- ── Modal de confirmación para Limpiar todo ── -->
       <div id="confirm-overlay">
         <div id="confirm-box">
           <div class="confirm-icon">&#128465;&#65039;</div>
@@ -426,14 +435,6 @@
           </div>
         </div>
       </div>
-
-      <button onclick="alternarPantalla()" id="btn-pantalla"
-              style="position:fixed;bottom:68px;right:12px;z-index:999;
-                     background:var(--accent);color:#fff;border:none;
-                     border-radius:50%;width:42px;height:42px;font-size:1.1rem;
-                     cursor:pointer;box-shadow:0 4px 14px rgba(37,99,235,0.4);">🔁</button>
-
-    </div><!-- fin pantalla2 -->
 
     <div id="storage-bar">
       <!-- ✨ Botón Limpiar todo — antes del indicador de peso -->
