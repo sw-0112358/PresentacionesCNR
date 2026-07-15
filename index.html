@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-    <title>Registro-CNR</title>
+    <title>PresentacionesCNR</title>
 
     <link rel="manifest" href="manifest.json">
     <link rel="icon" href="icono.jpg" type="image/jpeg">
@@ -337,7 +337,7 @@
         <div class="card">
           <div class="card-title" onclick="abrirConfigWorker()" 
                style="cursor:pointer;" title="Configurar Worker URL">
-            &#128203; Presentaciones CNR v5
+            &#128203; PresentacionesCNR v5
           </div>
           <div class="form-grid">
             <div class="field">
@@ -477,6 +477,7 @@
       </div>
       <input type="file" id="importBackupFile" accept=".json" style="display:none" onchange="importarBackup(this)">
       <div class="bar-sep"></div>
+      <button class="storage-btn" onclick="abrirConfigWorker()" title="Configurar Worker / Cloud Key">☁️⚙️</button>
       <button id="theme-toggle" onclick="toggleTema()" title="Cambiar tema">&#127769;</button>
     </div>
 
