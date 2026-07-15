@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-    <title>Registro QR</title>
+    <title>CNR PRESENTACIONES</title>
 
     <link rel="manifest" href="manifest.json">
     <link rel="icon" href="icono.jpg" type="image/jpeg">
@@ -334,19 +334,10 @@
   <body>
     <div id="pantalla1" style="display:block;">
       <div class="page">
-
-        <div class="header">
-          <div class="header-icon">&#11035;</div>
-          <div class="header-text">
-            <h1>Registro QR</h1>
-            <p>Captura y seguimiento de presentaciones CNR</p>
-          </div>
-        </div>
-
         <div class="card">
           <div class="card-title" onclick="abrirConfigWorker()" 
                style="cursor:pointer;" title="Configurar Worker URL">
-            &#128203; Nueva entrada
+            &#128203; Presentaciones CNR v5
           </div>
           <div class="form-grid">
             <div class="field">
@@ -486,9 +477,55 @@
       </div>
       <input type="file" id="importBackupFile" accept=".json" style="display:none" onchange="importarBackup(this)">
       <div class="bar-sep"></div>
+      <button class="storage-btn" onclick="abrirConfigWorker()" title="Configurar Worker / Cloud Key">☁️⚙️</button>
       <button id="theme-toggle" onclick="toggleTema()" title="Cambiar tema">&#127769;</button>
     </div>
 
+    
+    <!-- ── Panel configuración cloud ── -->
+    <div id="panel-cloud" style="display:none;position:fixed;inset:0;z-index:1100;
+         background:rgba(0,0,0,0.55);backdrop-filter:blur(4px);
+         align-items:center;justify-content:center;">
+      <div style="background:var(--surface);border:1px solid var(--border-lit);
+                  border-radius:14px;padding:24px 22px;width:min(92vw,420px);
+                  display:flex;flex-direction:column;gap:14px;">
+        <div style="font-size:0.72rem;font-weight:700;letter-spacing:1.6px;
+                    text-transform:uppercase;color:var(--accent);">☁️ Configuración Cloud</div>
+        <div style="display:flex;flex-direction:column;gap:5px;">
+          <label style="font-size:0.75rem;color:var(--text-dim);">Worker URL</label>
+          <input id="inp-worker-url" type="text"
+                 placeholder="https://xxx.workers.dev"
+                 style="background:var(--surface2);border:1px solid var(--border);
+                        border-radius:9px;padding:10px 13px;color:var(--text);
+                        font-family:'JetBrains Mono',monospace;font-size:0.82rem;
+                        outline:none;width:100%;">
+        </div>
+        <div style="display:flex;flex-direction:column;gap:5px;">
+          <label style="font-size:0.75rem;color:var(--text-dim);">ID de guardado (Cloud Key)</label>
+          <input id="inp-cloud-key" type="text"
+                 placeholder="qr-registro-v1"
+                 style="background:var(--surface2);border:1px solid var(--border);
+                        border-radius:9px;padding:10px 13px;color:var(--text);
+                        font-family:'JetBrains Mono',monospace;font-size:0.82rem;
+                        outline:none;width:100%;">
+        </div>
+        <div style="display:flex;gap:10px;margin-top:4px;">
+          <button onclick="cerrarPanelCloud()"
+                  style="flex:1;padding:10px;border:1px solid var(--border);
+                         border-radius:9px;background:transparent;color:var(--text-dim);
+                         font-family:'Outfit',sans-serif;font-size:0.88rem;cursor:pointer;">
+            Cancelar</button>
+          <button onclick="guardarConfigCloud()"
+                  style="flex:1;padding:10px;border:none;border-radius:9px;
+                         background:linear-gradient(135deg,var(--accent),#6366f1);
+                         color:#fff;font-family:'Outfit',sans-serif;
+                         font-size:0.88rem;font-weight:600;cursor:pointer;">
+            Guardar</button>
+        </div>
+      </div>
+    </div>
+    
+    
     <div id="toast"></div>
     <canvas id="canvas"></canvas>
     <script src="https://cdn.jsdelivr.net/npm/jsqr/dist/jsQR.js"></script>
@@ -498,7 +535,7 @@
          VARIABLES GLOBALES
          ============================================================ */
       var STORAGE_KEY     = 'qr_registros_v1';
-      var CLOUD_KEY       = 'qr-registro-v1';
+      var CLOUD_KEY       = localStorage.getItem('_cf_cloud_key');
       var _pantallaActual = 1;
 
       function alternarPantalla() {
@@ -613,17 +650,28 @@
 
 
       function abrirConfigWorker() {
-        var actual = localStorage.getItem('_cf_worker_url')
-        || 'https://shiny-bread-e818.gx0112358.workers.dev';
-        var nueva = prompt('☁️ Cloudflare Worker URL:', actual);
-        if (nueva === null) return;
-        if (!nueva.trim()) { toast('⚠️ URL vacía, no se guardó.'); return; }
-        var url = nueva.trim().replace(/\/$/, '');
+        document.getElementById('inp-worker-url').value =
+          localStorage.getItem('_cf_worker_url') || 'https://shiny-bread-e818.gx0112358.workers.dev';
+        document.getElementById('inp-cloud-key').value =
+          localStorage.getItem('_cf_cloud_key') || 'qr-registro-v1';
+        document.getElementById('panel-cloud').style.display = 'flex';
+      }
+      function cerrarPanelCloud() {
+        document.getElementById('panel-cloud').style.display = 'none';
+      }
+      function guardarConfigCloud() {
+        var url = document.getElementById('inp-worker-url').value.trim().replace(/\/$/, '');
+        var key = document.getElementById('inp-cloud-key').value.trim();
+        if (!url) { toast('⚠️ Worker URL vacío'); return; }
+        if (!key) { toast('⚠️ ID de guardado vacía'); return; }
         localStorage.setItem('_cf_worker_url', url);
+        localStorage.setItem('_cf_cloud_key', key);
         CF_WORKER = url;
+        CLOUD_KEY = key;
         PROXY_API = url + '/api?target=';
         PROXY_URL = url + '/url?target=';
-        toast('✅ Worker URL actualizado');
+        cerrarPanelCloud();
+        toast('✅ Configuración cloud guardada');
       }
 
 
