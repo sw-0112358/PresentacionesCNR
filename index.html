@@ -2126,7 +2126,7 @@
             registros = raw ? JSON.parse(raw) : [];
             if (registros.length) {
               await cnrDB.set(STORAGE_KEY, registros);
-              cnrDB.delete(STORAGE_KEY).catch(() => {});
+              localStorage.removeItem(STORAGE_KEY);
             }
           } else {
             registros = Array.isArray(data) ? data : [];
