@@ -337,7 +337,7 @@
         <div class="card">
           <div class="card-title" onclick="abrirConfigWorker()" 
                style="cursor:pointer;" title="Configurar Worker URL">
-            &#128203; PresentacionesCNR v5
+            &#128203; PresentacionesCNR v5.1
           </div>
           <div class="form-grid">
             <div class="field">
@@ -536,6 +536,51 @@
          ============================================================ */
       var STORAGE_KEY     = 'qr_registros_v1';
       var CLOUD_KEY       = localStorage.getItem('_cf_cloud_key');
+
+      /* ── IndexedDB ── */
+      let _cnrDB = null;
+      function cnrAbrirDB() {
+        return new Promise((resolve, reject) => {
+          if (_cnrDB) { resolve(_cnrDB); return; }
+          const req = indexedDB.open('CNRPresentaciones', 1);
+          req.onupgradeneeded = e => {
+            const db = e.target.result;
+            if (!db.objectStoreNames.contains('datos')) {
+              db.createObjectStore('datos', { keyPath: 'key' });
+            }
+          };
+          req.onsuccess = e => { _cnrDB = e.target.result; resolve(_cnrDB); };
+          req.onerror   = e => reject(e.target.error);
+        });
+      }
+      const cnrDB = {
+        async set(key, value) {
+          const db = await cnrAbrirDB();
+          return new Promise((resolve, reject) => {
+            const tx = db.transaction('datos', 'readwrite');
+            tx.objectStore('datos').put({ key, value });
+            tx.oncomplete = () => resolve();
+            tx.onerror    = e => reject(e.target.error);
+          });
+        },
+        async get(key) {
+          const db = await cnrAbrirDB();
+          return new Promise((resolve, reject) => {
+            const req = db.transaction('datos', 'readonly').objectStore('datos').get(key);
+            req.onsuccess = e => resolve(e.target.result?.value ?? null);
+            req.onerror   = e => reject(e.target.error);
+          });
+        },
+        async delete(key) {
+          const db = await cnrAbrirDB();
+          return new Promise((resolve, reject) => {
+            const tx = db.transaction('datos', 'readwrite');
+            tx.objectStore('datos').delete(key);
+            tx.oncomplete = () => resolve();
+            tx.onerror    = e => reject(e.target.error);
+          });
+        }
+      };
       var _pantallaActual = 1;
 
       function alternarPantalla() {
@@ -1009,7 +1054,7 @@
 
       function confirmarLimpiarTodo() {
         registros = [];
-        localStorage.removeItem(STORAGE_KEY);
+        cnrDB.delete(STORAGE_KEY).catch(() => {});
         actualizarStorageBar();
         renderList();
         limpiarBusqueda();
@@ -1119,9 +1164,9 @@
         }
       });
 
-      window.addEventListener('DOMContentLoaded', function() {
+      window.addEventListener('DOMContentLoaded', async function() {
         cargarTema();
-        cargarDesdeStorage();
+        await cargarDesdeStorage();
         renderList();
         resetearVista();
         limpiarFormulario(obtenerSiguienteNumero());
@@ -1939,7 +1984,7 @@
          ============================================================ */
       function actualizarStorageBar() {
         try {
-          var raw   = localStorage.getItem(STORAGE_KEY) || '';
+          var raw   = JSON.stringify(registros);
           var bytes = raw.length * 2;
           var kb    = (bytes / 1024).toFixed(1);
           var el    = document.getElementById('storage-size');
@@ -1951,7 +1996,7 @@
 
       function exportarBackup() {
         try {
-          var raw  = localStorage.getItem(STORAGE_KEY) || '[]';
+          var raw  = JSON.stringify(registros.length ? registros : []);
           var blob = new Blob([raw], { type: 'application/json' });
           var url  = URL.createObjectURL(blob);
           var a    = document.createElement('a');
@@ -2060,7 +2105,7 @@
             }
             if (!existe) { registros.push(datos[i]); nuevos++; }
           }
-          guardarEnStorage();
+          await guardarEnStorage();
           renderList();
           actualizarStorageBar();
           toast('☁️ ' + nuevos + ' registros cargados desde la nube.');
@@ -2068,14 +2113,24 @@
       }
 
       function guardarEnStorage() {
-        localStorage.setItem(STORAGE_KEY, JSON.stringify(registros));
+        cnrDB.set(STORAGE_KEY, registros).catch(e => console.error('IDB save:', e));
         actualizarStorageBar();
       }
 
-      function cargarDesdeStorage() {
+      async function cargarDesdeStorage() {
         try {
-          var raw = localStorage.getItem(STORAGE_KEY);
-          registros = raw ? JSON.parse(raw) : [];
+          const data = await cnrDB.get(STORAGE_KEY);
+          // migrar desde localStorage si IDB está vacío
+          if (!data) {
+            const raw = localStorage.getItem(STORAGE_KEY);
+            registros = raw ? JSON.parse(raw) : [];
+            if (registros.length) {
+              await cnrDB.set(STORAGE_KEY, registros);
+              cnrDB.delete(STORAGE_KEY).catch(() => {});
+            }
+          } else {
+            registros = Array.isArray(data) ? data : [];
+          }
         } catch(e) { registros = []; }
         actualizarStorageBar();
       }
